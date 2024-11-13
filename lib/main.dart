@@ -1,0 +1,31 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import 'package:kwf_energiemonitor/main_screen.dart';
+
+var kColorScheme =
+    ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 138, 187, 61));
+
+var kTextTheme = GoogleFonts.latoTextTheme();
+
+final kwfTheme =
+    ThemeData().copyWith(colorScheme: kColorScheme, textTheme: kTextTheme);
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const App());
+}
+
+class App extends StatelessWidget {
+  const App({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(theme: kwfTheme, home: const MainScreen());
+  }
+}
