@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kwf_energiemonitor/energy_list.dart';
 
 // Defining the pages of the main screen
 List<MainScreenPage> mainScreenPages = [
@@ -12,8 +13,7 @@ List<MainScreenPage> mainScreenPages = [
       title: 'Eintragen',
       label: 'Eintragen',
       menuIcon: Icons.add_circle,
-      widget: const Center(
-          child: Text('Hier zusätzliche Energiequellen manuell eintragen'))),
+      widget: EnergyList()),
   MainScreenPage(
       title: 'Download',
       label: 'Download',
