@@ -11,7 +11,7 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _activePage = 1;
+  int _activePage = 0; //Defaulting to Home
 
   void _changePage(int index) {
     setState(() {
@@ -75,9 +75,7 @@ class _MainScreenState extends State<MainScreen> {
               return Text(
                   'Error: ${snapshot.error}'); // Todo: Beautiful error handling
             } else {
-              return Center(
-                child: mainScreenPages[_activePage].widget,
-              );
+              return mainScreenPages[_activePage].widget;
             }
           },
         ));
