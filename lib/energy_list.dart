@@ -111,7 +111,6 @@ class _EnergyListState extends State<EnergyList> {
             ElevatedButton(
               onPressed: () {
                 // Validate the form and save data
-                print(form.currentState);
                 if (form.currentState!.validate()) {
                   form.currentState!.save(); // Save the form data
                   // Add the new item to Firestore

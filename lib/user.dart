@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AppUser {
   static final AppUser _singleton = AppUser._internal();
@@ -8,6 +8,8 @@ class AppUser {
   User? firebaseUser;
   String? userId;
   String? email;
+  List<String> monitorRead = [];
+  List<String> monitorEdit = [];
 
   // Private constructor for Singleton
   AppUser._internal();
@@ -63,6 +65,17 @@ class AppUser {
       // Reload the user to reflect changes
       await firebaseUser?.reload();
 
+      // Create user in database with a specific ID
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId) // Set the document ID to userId
+          .set({
+        'user_id': userId,
+        'monitor_read': [],
+        'monitor_edit': [],
+        'date_created': DateTime.now()
+      });
+
       // Return null if no errors
       return null;
     } on FirebaseAuthException catch (e) {
@@ -85,12 +98,23 @@ class AppUser {
     }
   }
 
-  Future<void> updateNickname(String newNickname) async {
+  Future<String?> updateNickname(String newNickname) async {
     if (firebaseUser != null && newNickname.isNotEmpty) {
-      await firebaseUser!.updateDisplayName(newNickname);
-      // Reload the user to reflect the updated display name
-      await firebaseUser!.reload();
-      firebaseUser = FirebaseAuth.instance.currentUser;
+      try {
+        await firebaseUser!.updateDisplayName(newNickname);
+
+        // Also update custom user db
+        await FirebaseFirestore.instance.collection('users').doc(userId).update(
+            {'user_name': newNickname, 'nickname_changed': DateTime.now()});
+
+        // Reload the user to reflect the updated display name
+        await firebaseUser!.reload();
+        firebaseUser = FirebaseAuth.instance.currentUser;
+
+        return null;
+      } on Exception catch (e) {
+        return e.toString();
+      }
     }
   }
 

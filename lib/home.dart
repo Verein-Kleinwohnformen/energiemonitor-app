@@ -9,6 +9,12 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  _showMessage(String message) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -34,17 +40,26 @@ class _UserTextState extends State<UserText> {
   bool isEdit = false;
   bool isSending = false;
 
+  _showMessage(String message) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
   sendNewNickname() async {
     if (form.currentState!.validate()) {
       form.currentState!.save();
       setState(() {
         isSending = true;
       });
-      await AppUser().updateNickname(enteredName!);
+      final error = await AppUser().updateNickname(enteredName!);
       setState(() {
         isSending = false;
         isEdit = false;
       });
+      if (error != null) {
+        _showMessage(error);
+      }
     }
   }
 
