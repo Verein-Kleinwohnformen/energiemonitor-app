@@ -34,16 +34,22 @@ class _MainScreenState extends State<MainScreen> {
                     icon: const Icon(Icons.logout),
                     color: Colors.white,
                     tooltip: 'Ausloggen',
-                    onPressed: () {
-                      AppUser().signOut();
+                    onPressed: () async {
+                      await AppUser().signOut();
+                      setState(() {
+                        AppUser();
+                      });
                     })
                 : IconButton(
                     icon: const Icon(Icons.login),
                     color: Colors.white,
                     tooltip: 'Einloggen',
-                    onPressed: () {
-                      Navigator.of(context).push(MaterialPageRoute(
+                    onPressed: () async {
+                      await Navigator.of(context).push(MaterialPageRoute(
                           builder: (context) => const LoginScreen()));
+                      setState(() {
+                        AppUser();
+                      });
                     })
           ],
         ),

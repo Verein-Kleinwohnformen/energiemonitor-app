@@ -17,49 +17,30 @@ class _LoginScreenState extends State<LoginScreen> {
   var _enteredPassword = '';
   bool _isSending = false;
 
-  _showErrorMessage(String message) {
+  _showMessage(String message) {
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  _sendPasswordLink() async {
+  // Pass a function to perform an action in the user class
+  _userAction(Function(String, String) action, String successMsg) async {
     if (_form.currentState!.validate()) {
       _form.currentState!.save();
-
       setState(() {
         _isSending = true;
       });
-
-      await AppUser().passwordForgotten(_enteredEmail);
-      _showErrorMessage("Email wurde versendet");
-
+      String? e = await action(_enteredEmail, _enteredPassword);
       setState(() {
         _isSending = false;
       });
-    }
-  }
-
-  // define the function to execute
-  _googleAuthRequest(Function(String, String) request) async {
-    if (_form.currentState!.validate()) {
-      _form.currentState!.save();
-      setState(() {
-        _isSending = true;
-      });
-      var resp = await request(_enteredEmail, _enteredPassword);
-      if (resp == null) {
-        setState(() {
-          _isSending = false;
-        });
+      if (e == null) {
+        _showMessage(successMsg);
         if (context.mounted) {
-          Navigator.of(context).pop(true);
+          Navigator.of(context).pop();
         }
       } else {
-        _showErrorMessage(resp);
-        setState(() {
-          _isSending = false;
-        });
+        _showMessage(e!);
       }
     }
   }
@@ -111,7 +92,8 @@ class _LoginScreenState extends State<LoginScreen> {
               onPressed: _isSending
                   ? null
                   : () async {
-                      _googleAuthRequest(AppUser().createUser);
+                      _userAction(
+                          AppUser().createUser, "Neues Konto wurde erstellt");
                     },
               child: _isSending
                   ? const CircularProgressIndicator()
@@ -158,7 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
               onPressed: _isSending
                   ? null
                   : () async {
-                      _googleAuthRequest(AppUser().signIn);
+                      _userAction(AppUser().signIn, "Du bist eingeloggt");
                     },
               child: _isSending
                   ? const CircularProgressIndicator()
@@ -194,7 +176,18 @@ class _LoginScreenState extends State<LoginScreen> {
               onPressed: _isSending
                   ? null
                   : () async {
-                      _sendPasswordLink();
+                      if (_form.currentState!.validate()) {
+                        _form.currentState!.save();
+                        setState(() {
+                          _screenType = ScreenType.login;
+                          _isSending = true;
+                        });
+                        await AppUser().passwordForgotten(_enteredEmail);
+                        setState(() {
+                          _isSending = false;
+                        });
+                        _showMessage("Email wurde versendet");
+                      }
                     },
               child: _isSending
                   ? const CircularProgressIndicator()
