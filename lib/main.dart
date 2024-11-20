@@ -5,13 +5,13 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:kwf_energiemonitor/main_screen.dart';
 
-var kColorScheme =
+final kColorScheme =
     ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 138, 187, 61));
 
-var kTextTheme = GoogleFonts.latoTextTheme();
+final kTextTheme = GoogleFonts.latoTextTheme();
 
-final kwfTheme =
-    ThemeData().copyWith(colorScheme: kColorScheme, textTheme: kTextTheme);
+final kwfTheme = ThemeData(textTheme: kTextTheme)
+    .copyWith(colorScheme: kColorScheme, textTheme: kTextTheme);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
