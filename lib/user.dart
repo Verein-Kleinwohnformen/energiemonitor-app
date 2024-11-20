@@ -5,13 +5,16 @@ class AppUser {
   static final AppUser _singleton = AppUser._internal();
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 
-  bool isLoggedIn = false;
   User? firebaseUser;
   String? userId;
   String? email;
 
   // Private constructor for Singleton
   AppUser._internal();
+
+  // Public getters
+  bool get isLoggedIn => firebaseUser != null;
+  String? get nickname => firebaseUser?.displayName;
 
   // Factory constructor to access the singleton instance
   factory AppUser() {
@@ -22,17 +25,11 @@ class AppUser {
   Future<void> init() async {
     final currentUser = _firebaseAuth.currentUser;
     if (currentUser != null) {
-      isLoggedIn = true;
       firebaseUser = currentUser;
       userId = currentUser.uid;
       email = currentUser.email;
-    } else {
-      isLoggedIn = false;
     }
   }
-
-  // Public getter and setter methods
-  String? get nickname => firebaseUser?.displayName;
 
   // Example method to fetch additional information or user data if needed
   Future<void> fetchAdditionalUserData() async {
@@ -62,7 +59,6 @@ class AppUser {
       firebaseUser = ucr.user;
       userId = firebaseUser?.uid;
       this.email = firebaseUser?.email;
-      isLoggedIn = true;
 
       // Reload the user to reflect changes
       await firebaseUser?.reload();
@@ -83,7 +79,6 @@ class AppUser {
       firebaseUser = ucr.user;
       userId = firebaseUser?.uid;
       this.email = firebaseUser?.email;
-      isLoggedIn = true;
       return null;
     } on FirebaseAuthException catch (e) {
       return e.message;
@@ -106,6 +101,5 @@ class AppUser {
   // Log out method
   Future<void> signOut() async {
     await _firebaseAuth.signOut();
-    isLoggedIn = false;
   }
 }
