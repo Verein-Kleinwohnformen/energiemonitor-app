@@ -9,19 +9,42 @@ class AppUser {
   User? firebaseUser;
   String? userId;
   String? email;
+  int _activeMonitorRead = 0;
   List<EnergieMonitor> monitorRead = [];
   List<EnergieMonitor> monitorEdit = [];
 
   // Private constructor for Singleton
   AppUser._internal();
 
+  // Remove all user data
+  AppUser.init() {
+    firebaseUser = null;
+    userId = null;
+    email = null;
+    _activeMonitorRead = 0;
+    monitorRead = [];
+    monitorEdit = [];
+  }
+
   // Public getters
   bool get isLoggedIn => firebaseUser != null;
   String? get nickname => firebaseUser?.displayName;
+  int get activeMonitorRead => _activeMonitorRead;
+  EnergieMonitor? get activeMonitor =>
+      monitorRead.isEmpty ? null : monitorRead[_activeMonitorRead];
 
   // Factory constructor to access the singleton instance
   factory AppUser() {
     return _singleton;
+  }
+
+  // Switch the monitor that is displayed for this user
+  void changeActiveMonitorRead() {
+    _activeMonitorRead += 1;
+
+    if (_activeMonitorRead > monitorRead.length - 1) {
+      _activeMonitorRead = 0;
+    }
   }
 
   // Method to initialize the user from Firebase Auth
@@ -50,10 +73,8 @@ class AppUser {
           Map<String, dynamic> userData =
               userDoc.data() as Map<String, dynamic>;
 
-          List<String> editIds = userData['monitor_edit'] as List<String>;
-          List<String> readIds = userData['monitor_read'] as List<String>;
-
-          print("This user can read the monitors: $readIds");
+          final editIds = userData['monitor_edit'];
+          final readIds = userData['monitor_read'];
 
           // Fetch the monitor data for this user
           for (String id in readIds) {
@@ -61,7 +82,7 @@ class AppUser {
             if (emon != null) {
               monitorRead.add(emon);
             } else {
-              print("Error: Energymonitor not found!");
+              print("Error: Energiemonitor not found!");
             }
           }
 
@@ -70,7 +91,7 @@ class AppUser {
             if (emon != null) {
               monitorEdit.add(emon);
             } else {
-              print("Error: Energymonitor not found!");
+              print("Error: Energieonitor not found!");
             }
           }
         } else {
@@ -160,5 +181,8 @@ class AppUser {
   // Log out method
   Future<void> signOut() async {
     await _firebaseAuth.signOut();
+
+    // Remove all user data
+    init();
   }
 }

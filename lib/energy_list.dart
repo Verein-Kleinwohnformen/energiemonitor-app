@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kwf_energiemonitor/user.dart';
 import 'package:kwf_energiemonitor/energy.dart';
 
 class EnergyList extends StatefulWidget {
@@ -137,50 +138,76 @@ class _EnergyListState extends State<EnergyList> {
     );
   }
 
+  manuallyAddedEnergy() {
+    return;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(),
-      floatingActionButton: FloatingActionButton(
-          onPressed: () => _showAddItemDialog(context),
-          tooltip: "Energieträger hinzufügen",
-          child: const Icon(Icons.add)),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore.collection('manual_input').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+        floatingActionButton: AppUser().activeMonitor != null
+            ? FloatingActionButton(
+                onPressed: () => _showAddItemDialog(context),
+                tooltip: "Energieträger hinzufügen",
+                child: const Icon(Icons.add))
+            : null,
+        body: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: AppUser().activeMonitor == null
+                ? const Text("Kein Energiemonitor aktiv!")
+                : StreamBuilder<QuerySnapshot>(
+                    stream: _firestore.collection('manual_input').snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: _infoBox(context));
-          }
+                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                        return Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                      "Dein Monitor: ${AppUser().activeMonitor!.tinyhouseName}"),
+                                  Center(child: _infoBox(context)),
+                                ]));
+                      }
 
-          energyEntries = EnergyCollection.fromSnapshot(snapshot);
+                      energyEntries = EnergyCollection.fromSnapshot(snapshot);
 
-          return ListView.builder(
-            itemCount: energyEntries.length + 1, // +1 for the static info card
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                // First item: Info card
-                return _infoBox(context);
-              } else {
-                // Other items: Loaded dynamically from Firebase
-                final energy = energyEntries.energyCol[index - 1];
-                return Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Card(
-                    child: ListTile(
-                      title: Text(energy.description ?? 'Keine Beschreibung'),
-                      subtitle: Text(energy.type.name ?? 'Kein Typ'),
-                    ),
-                  ),
-                );
-              }
-            },
-          );
-        },
-      ),
-    );
+                      return Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                    "Dein Monitor: ${AppUser().activeMonitor!.tinyhouseName}"),
+                                Expanded(
+                                    child: ListView.builder(
+                                  itemCount: energyEntries.length +
+                                      1, // +1 for the static info card
+                                  itemBuilder: (context, index) {
+                                    if (index == 0) {
+                                      // First item: Info card
+                                      return _infoBox(context);
+                                    } else {
+                                      // Other items: Loaded dynamically from Firebase
+                                      final energy =
+                                          energyEntries.energyCol[index - 1];
+                                      return Card(
+                                        child: ListTile(
+                                          title: Text(energy.description ??
+                                              'Keine Beschreibung'),
+                                          subtitle: Text(
+                                              energy.type.name ?? 'Kein Typ'),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ))
+                              ]));
+                    },
+                  )));
   }
 }

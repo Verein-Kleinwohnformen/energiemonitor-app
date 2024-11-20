@@ -34,9 +34,9 @@ class EnergieMonitor {
 
   factory EnergieMonitor.fromFirebase(Map<String, dynamic> data) {
     return EnergieMonitor(
-      id: data['id'],
-      tinyhouseName: data['tinyhouseName'] ?? 'Name unbekannt',
-      tinyhouseLocation: data['tinyhouseLocation'] ?? 'Ort unbekannt',
+      id: data['monitor_id'],
+      tinyhouseName: data['tinyhouse_name'] ?? 'Name unbekannt',
+      tinyhouseLocation: data['tinyhouse_location'] ?? 'Ort unbekannt',
     );
   }
 }
