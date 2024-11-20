@@ -77,7 +77,7 @@ class _UserTextState extends State<UserText> {
                   ? AppUser().nickname == null
                       ? const Text("Hallo, Nutzer ohne Namen!")
                       : Text("Hallo ${AppUser().nickname}")
-                  : SizedBox(width: 300, child: nameInputField()),
+                  : SizedBox(width: 200, child: nameInputField()),
           const SizedBox(width: 5),
           isSending
               ? const SizedBox(
@@ -87,7 +87,7 @@ class _UserTextState extends State<UserText> {
                       onPressed: (() {
                         sendNewNickname();
                       }),
-                      tooltip: "Namen ändern",
+                      tooltip: "Name ändern",
                       icon: const Icon(Icons.send),
                       iconSize: 18)
                   : IconButton(
@@ -96,7 +96,7 @@ class _UserTextState extends State<UserText> {
                           isEdit = true;
                         });
                       }),
-                      tooltip: "Namen ändern",
+                      tooltip: "Name ändern",
                       icon: const Icon(Icons.edit_sharp),
                       iconSize: 18)
         ]));
