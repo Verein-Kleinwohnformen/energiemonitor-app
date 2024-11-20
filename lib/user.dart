@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kwf_energiemonitor/monitor.dart';
 
 class AppUser {
   static final AppUser _singleton = AppUser._internal();
@@ -8,8 +9,8 @@ class AppUser {
   User? firebaseUser;
   String? userId;
   String? email;
-  List<String> monitorRead = [];
-  List<String> monitorEdit = [];
+  List<EnergieMonitor> monitorRead = [];
+  List<EnergieMonitor> monitorEdit = [];
 
   // Private constructor for Singleton
   AppUser._internal();
@@ -30,19 +31,51 @@ class AppUser {
       firebaseUser = currentUser;
       userId = currentUser.uid;
       email = currentUser.email;
+      await fetchAdditionalUserData();
     }
   }
 
-  // Example method to fetch additional information or user data if needed
+  // For data stored outside of firebase auth
   Future<void> fetchAdditionalUserData() async {
     if (firebaseUser != null) {
-      // Example: Fetch user data from Firebase Storage or Firestore, etc.
+      // Fetch user data from Firebase Storage or Firestore, etc.
       try {
-        // Firebase Storage or Firestore calls can be made here to get more data
-        // For instance, to fetch a profile picture from Firebase Storage:
-        // final profilePicUrl = await FirebaseStorage.instance
-        //     .ref('profile_pics/${firebaseUser!.uid}.jpg')
-        //     .getDownloadURL();
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .get();
+
+        if (userDoc.exists) {
+          // Retrieve the data as a Map
+          Map<String, dynamic> userData =
+              userDoc.data() as Map<String, dynamic>;
+
+          List<String> editIds = userData['monitor_edit'] as List<String>;
+          List<String> readIds = userData['monitor_read'] as List<String>;
+
+          print("This user can read the monitors: $readIds");
+
+          // Fetch the monitor data for this user
+          for (String id in readIds) {
+            final emon = await fetchMonitor(id);
+            if (emon != null) {
+              monitorRead.add(emon);
+            } else {
+              print("Error: Energymonitor not found!");
+            }
+          }
+
+          for (String id in editIds) {
+            final emon = await fetchMonitor(id);
+            if (emon != null) {
+              monitorEdit.add(emon);
+            } else {
+              print("Error: Energymonitor not found!");
+            }
+          }
+        } else {
+          throw Exception("No user document found for user $userId");
+        }
       } catch (e) {
         print("Error fetching additional data: $e");
       }
@@ -92,9 +125,10 @@ class AppUser {
       firebaseUser = ucr.user;
       userId = firebaseUser?.uid;
       this.email = firebaseUser?.email;
+      await fetchAdditionalUserData();
       return null;
-    } on FirebaseAuthException catch (e) {
-      return e.message;
+    } on Exception catch (e) {
+      return e.toString();
     }
   }
 
@@ -116,6 +150,7 @@ class AppUser {
         return e.toString();
       }
     }
+    return null;
   }
 
   Future<void> passwordForgotten(email) async {
