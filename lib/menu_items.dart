@@ -8,13 +8,13 @@ List<MainScreenPage> mainScreenPages = [
     title: 'Home',
     label: 'Home',
     menuIcon: Icons.house,
-    widget: const Center(child: SizedBox(width: 600, child: HomePage())),
+    widget: const SizedBox(width: 600, child: HomePage()),
   ),
   MainScreenPage(
       title: 'Eintragen',
       label: 'Eintragen',
       menuIcon: Icons.add_circle,
-      widget: const Center(child: SizedBox(width: 600, child: EnergyList()))),
+      widget: const SizedBox(width: 600, child: EnergyList())),
   MainScreenPage(
       title: 'Download',
       label: 'Download',
