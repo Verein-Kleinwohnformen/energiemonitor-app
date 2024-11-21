@@ -19,8 +19,8 @@ class _EnergyFormState extends State<EnergyForm> {
   DateTime? usageDate;
   EnergyType? selectedType;
   String? selectedUnit;
-  double purchaseQuantity = 0.0;
-  double leftoverQuantity = 0.0;
+  double? purchaseQuantity;
+  double? leftoverQuantity;
 
   Map<String, dynamic>? get selectedCategory {
     if (selectedType == null) {
@@ -106,78 +106,6 @@ class _EnergyFormState extends State<EnergyForm> {
     },
   ];
 
-  @override
-  Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Energieträger hinzufügen'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _typeSelector(primaryColor),
-                const SizedBox(height: 16),
-                Text("Deine eigene Beschreibung",
-                    style: Theme.of(context).textTheme.labelSmall),
-                _descriptionField(),
-                const SizedBox(height: 16),
-                Text("Wieviel hast du dem System hinzugefügt?",
-                    style: Theme.of(context).textTheme.labelSmall),
-                _quantityRow("Hinzugefügte Menge", purchaseQuantity),
-                const SizedBox(height: 16),
-                Text("Wieviel hast du noch übrig?",
-                    style: Theme.of(context).textTheme.labelSmall),
-                _quantityRow("Übrige Menge", leftoverQuantity),
-                const SizedBox(height: 16),
-                Text("Wann hast du diese Menge hinzugefügt?",
-                    style: Theme.of(context).textTheme.labelSmall),
-                _dateField("Kaufdatum eingeben", purchaseDate,
-                    (date) => purchaseDate = date),
-                const SizedBox(height: 16),
-                Text("Bis wann schätzt du, ist diese Menge aufgebraucht?",
-                    style: Theme.of(context).textTheme.labelSmall),
-                _dateField("Verbrauchsdatum eingeben", usageDate,
-                    (date) => usageDate = date),
-                const SizedBox(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Abbrechen'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () async {
-                        if (_formKey.currentState!.validate()) {
-                          _formKey.currentState!.save();
-                          _manageUnits();
-                          await _addToDatabase();
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text("Eintrag hinzugefügt!")),
-                          );
-                        }
-                      },
-                      child: const Text('Hinzufügen'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _typeSelector(Color primaryColor) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -229,13 +157,9 @@ class _EnergyFormState extends State<EnergyForm> {
     );
   }
 
-  Widget _quantityRow(String text, double editVariable) {
+  Widget _quantityRow(String text, Function setValue) {
     return Row(children: [
-      Expanded(
-          child: _doubleField(
-        (value) => editVariable = value,
-        text,
-      )),
+      Expanded(child: _doubleField(text, setValue)),
       Expanded(
           child: _unitField(unitList, selectedUnit, (u) {
         setState(() {
@@ -289,7 +213,7 @@ class _EnergyFormState extends State<EnergyForm> {
     );
   }
 
-  Widget _doubleField(Function(double) onSave, String labelText) {
+  Widget _doubleField(String labelText, Function setValue) {
     return TextFormField(
       decoration: InputDecoration(labelText: labelText),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -305,7 +229,7 @@ class _EnergyFormState extends State<EnergyForm> {
       },
       onSaved: (value) {
         if (value != null && value.trim().isNotEmpty) {
-          onSave(double.parse(value));
+          setValue(double.parse(value));
         }
       },
     );
@@ -366,6 +290,78 @@ class _EnergyFormState extends State<EnergyForm> {
 
         return null; // Return null if the date is valid
       },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Energieträger hinzufügen'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _typeSelector(primaryColor),
+                const SizedBox(height: 16),
+                Text("Deine eigene Beschreibung",
+                    style: Theme.of(context).textTheme.labelSmall),
+                _descriptionField(),
+                const SizedBox(height: 16),
+                Text("Wieviel hast du dem System hinzugefügt?",
+                    style: Theme.of(context).textTheme.labelSmall),
+                _quantityRow("Hinzugefügte Menge", (q) => purchaseQuantity = q),
+                const SizedBox(height: 16),
+                Text("Wieviel hast du noch übrig?",
+                    style: Theme.of(context).textTheme.labelSmall),
+                _quantityRow("Übrige Menge", (q) => leftoverQuantity = q),
+                const SizedBox(height: 16),
+                Text("Wann hast du diese Menge hinzugefügt?",
+                    style: Theme.of(context).textTheme.labelSmall),
+                _dateField("Kaufdatum eingeben", purchaseDate,
+                    (date) => purchaseDate = date),
+                const SizedBox(height: 16),
+                Text("Bis wann schätzt du, ist diese Menge aufgebraucht?",
+                    style: Theme.of(context).textTheme.labelSmall),
+                _dateField("Verbrauchsdatum eingeben", usageDate,
+                    (date) => usageDate = date),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Abbrechen'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        if (_formKey.currentState!.validate()) {
+                          _formKey.currentState!.save();
+                          _manageUnits();
+                          await _addToDatabase();
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text("Eintrag hinzugefügt!")),
+                          );
+                        }
+                      },
+                      child: const Text('Hinzufügen'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

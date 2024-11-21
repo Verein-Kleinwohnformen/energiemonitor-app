@@ -79,6 +79,20 @@ class _MonitorDisplayState extends State<MonitorDisplay> {
       return Container();
     } else if (widget.activeMonitor == null) {
       return _infoBoxNoMonitors(context);
+    } else if (widget.activeMonitor!.id == "sandbox_monitor") {
+      return Align(
+          alignment: Alignment.topLeft,
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            _infoBoxNoMonitors(context),
+            Text("Dein Energiemonitor",
+                style: Theme.of(context).textTheme.labelMedium),
+            const SizedBox(height: 5),
+            Text(widget.activeMonitor!.tinyhouseName,
+                style: Theme.of(context).textTheme.headlineSmall),
+            Text(widget.activeMonitor!.tinyhouseLocation,
+                style: Theme.of(context).textTheme.labelLarge),
+          ]));
     } else {
       return Align(
           alignment: Alignment.topLeft,

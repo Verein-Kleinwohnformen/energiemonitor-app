@@ -33,7 +33,8 @@ class EnergyCollection {
 
   EnergyCollection.fromSnapshot(snapshot) {
     energyCol = snapshot.data!.docs
-        .map((doc) => Energy.fromFirebase(doc.data() as Map<String, dynamic>))
+        .map((doc) =>
+            Energy.fromFirebase(doc.id, doc.data() as Map<String, dynamic>))
         .toList()
         .cast<Energy>();
     energyCol.sort((a, b) => b.purchaseDate.compareTo(a.purchaseDate));
@@ -49,6 +50,7 @@ class EnergyCollection {
       required double purchaseQuantity,
       required double leftoverQuantity}) {
     Energy newEntry = Energy(
+        firebaseId: '',
         typeCounter: 0,
         description: description,
         purchaseDate: DateTime.now(),
@@ -68,6 +70,7 @@ class EnergyCollection {
 }
 
 class Energy {
+  String firebaseId;
   int typeCounter;
   String description;
   DateTime purchaseDate;
@@ -78,6 +81,7 @@ class Energy {
 
   // Default constructor with optional parameters and initialization
   Energy({
+    required this.firebaseId,
     required this.typeCounter,
     required this.description,
     required this.purchaseDate,
@@ -109,15 +113,15 @@ class Energy {
   String get displayUnit {
     switch (type) {
       case EnergyType.diesel:
-        return 'l';
+        return 'Liter';
       case EnergyType.woodSter:
         return 'Ster';
       case EnergyType.woodKg:
         return 'kg';
       case EnergyType.gasoline:
-        return 'l';
+        return 'Liter';
       case EnergyType.oil:
-        return 'l';
+        return 'Liter';
       case EnergyType.pellets:
         return 'kg';
       case EnergyType.propane:
@@ -145,8 +149,9 @@ class Energy {
   }
 
 // Factory constructor to create an Energy instance from Firebase data
-  factory Energy.fromFirebase(Map<String, dynamic> data) {
+  factory Energy.fromFirebase(String id, Map<String, dynamic> data) {
     return Energy(
+      firebaseId: id,
       typeCounter: data['type_counter'] ?? 0,
       description: data['description'] ?? '',
       purchaseDate: (data['purchase_date'] as Timestamp).toDate(),
@@ -155,6 +160,13 @@ class Energy {
       purchaseQuantity: (data['added_quantity'] ?? 0).toDouble(),
       leftoverQuantity: (data['leftover_quantity'] ?? 0).toDouble(),
     );
+  }
+
+  delete() async {
+    await FirebaseFirestore.instance
+        .collection('manual_input')
+        .doc(firebaseId)
+        .delete();
   }
 
   addToFirebase() async {

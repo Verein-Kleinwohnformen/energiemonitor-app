@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kwf_energiemonitor/energy.dart';
+import 'package:kwf_energiemonitor/user.dart';
 import 'package:intl/intl.dart'; // For formatting dates
 
 class EnergyCard extends StatelessWidget {
@@ -38,7 +39,7 @@ class EnergyCard extends StatelessWidget {
                 children: [
                   // Description
                   Text(
-                    energy.description ?? 'Keine Beschreibung',
+                    energy.description,
                     style: theme.headlineMedium,
                   ),
                   const SizedBox(height: 4),
@@ -71,23 +72,57 @@ class EnergyCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   // Quantities
                   Text(
-                    'Total: $totalQuantity',
+                    'Gelagert: $totalQuantity ${energy.displayUnit}',
                     style:
                         theme.headlineSmall?.copyWith(color: Colors.blueAccent),
                   ),
                   const SizedBox(height: 4),
-                  Text('Gekauft: ${energy.purchaseQuantity}'),
-                  Text('Übrig: ${energy.leftoverQuantity}'),
+                  Text(
+                      'Gekauft: ${energy.purchaseQuantity} ${energy.displayUnit}'),
+                  Text(
+                      'Übrig: ${energy.leftoverQuantity} ${energy.displayUnit}'),
                 ],
               ),
             ),
             // Delete Button
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () {
-                // Handle deletion
-              },
-            ),
+            if (AppUser().canEditActiveMonitor)
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () async {
+                  // Show the confirmation dialog
+                  bool? confirmed = await showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text('Eintrag löschen'),
+                        content: const Text(
+                            'Willst du diesen Eintrag wirklich löschen?'),
+                        actions: <Widget>[
+                          TextButton(
+                            child: const Text('Abbrechen'),
+                            onPressed: () {
+                              Navigator.of(context)
+                                  .pop(false); // Return false on cancel
+                            },
+                          ),
+                          TextButton(
+                            child: const Text('Löschen'),
+                            onPressed: () {
+                              Navigator.of(context)
+                                  .pop(true); // Return true on delete
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
+                  // If the user confirmed, delete the entry
+                  if (confirmed == true) {
+                    await energy.delete();
+                  }
+                },
+              )
           ],
         ),
       ),
