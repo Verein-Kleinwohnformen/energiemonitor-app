@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kwf_energiemonitor/user.dart';
 import 'package:kwf_energiemonitor/energy.dart';
+import 'package:kwf_energiemonitor/energy_form.dart';
 
 class EnergyList extends StatefulWidget {
   const EnergyList({super.key});
@@ -36,108 +37,6 @@ class _EnergyListState extends State<EnergyList> {
     );
   }
 
-  void _showAddItemDialog(BuildContext context) {
-    final form = GlobalKey<FormState>();
-    String description = '';
-    DateTime purchaseDate;
-    DateTime usageDate;
-    EnergyType type;
-    double purchaseQuantity = 0;
-    double leftoverQuantity = 0;
-
-    bool isSending = false;
-
-    Widget _doubleField(double ref, String labelText) {
-      return TextFormField(
-        decoration: InputDecoration(labelText: labelText),
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        autocorrect: false,
-        validator: (value) {
-          if (value == null || value.trim().isEmpty) {
-            return 'Bitte eine Zahl eingeben';
-          }
-          // Attempt to parse the input as a double
-          final doubleValue = double.tryParse(value);
-          if (doubleValue == null) {
-            return 'Bitte eine gültige Zahl eingeben';
-          }
-          return null;
-        },
-        onSaved: (value) {
-          // Save the parsed double value if it is valid
-          ref = double.parse(value!);
-        },
-      );
-    }
-
-    Widget _descriptionField() {
-      return TextFormField(
-          decoration: const InputDecoration(labelText: 'Beschreibung'),
-          keyboardType: TextInputType.name,
-          autocorrect: false,
-          textCapitalization: TextCapitalization.sentences,
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Bitte eine Beschreibung eingeben';
-            }
-            return null;
-          },
-          onSaved: (value) {
-            description = value!;
-          });
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Energieträger hinzufügen'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Form(
-                  key: form,
-                  child: Column(children: [
-                    _descriptionField(),
-                    _doubleField(purchaseQuantity, "Gekaufte Menge"),
-                    _doubleField(leftoverQuantity, "Übrige Menge"),
-                  ]))
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Abbrechen'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                // Validate the form and save data
-                if (form.currentState!.validate()) {
-                  form.currentState!.save(); // Save the form data
-                  // Add the new item to Firestore
-
-                  energyEntries.addNew(
-                      type: EnergyType.propane,
-                      description: description,
-                      purchaseQuantity: purchaseQuantity,
-                      leftoverQuantity: leftoverQuantity);
-
-                  Navigator.of(context).pop(); // Close the dialog
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Eintrag hinzugefügt!")),
-                  );
-                } else {
-                  print("Form not validated");
-                }
-              },
-              child: const Text('Hinzufügen'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   manuallyAddedEnergy() {
     return;
   }
@@ -147,7 +46,8 @@ class _EnergyListState extends State<EnergyList> {
     return Scaffold(
         floatingActionButton: AppUser().activeMonitor != null
             ? FloatingActionButton(
-                onPressed: () => _showAddItemDialog(context),
+                onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => EnergyForm())),
                 tooltip: "Energieträger hinzufügen",
                 child: const Icon(Icons.add))
             : null,
