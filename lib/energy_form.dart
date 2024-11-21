@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kwf_energiemonitor/energy.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kwf_energiemonitor/user.dart';
 
 class EnergyForm extends StatefulWidget {
   const EnergyForm({super.key});
@@ -28,6 +30,32 @@ class _EnergyFormState extends State<EnergyForm> {
       return categories
           .firstWhere((category) => category['type'] == selectedType);
     }
+  }
+
+  // Sort out the wood units
+  _manageUnits() {
+    if ([EnergyType.woodKg, EnergyType.woodSter].contains(selectedType)) {
+      if (selectedUnit == 'Kg') {
+        selectedType = EnergyType.woodKg;
+      } else if (selectedUnit == 'Ster') {
+        selectedType = EnergyType.woodSter;
+      }
+    }
+  }
+
+  Future<void> _addToDatabase() async {
+    // Create entry in database
+    await FirebaseFirestore.instance.collection('manual_input').add({
+      'monitor_id': AppUser().activeMonitor?.id ?? 'no_monitor',
+      'user_id': AppUser().userId ?? 'unauthenticated',
+      'description': description,
+      'purchase_date': purchaseDate,
+      'usage_date': usageDate,
+      'type': energyTypeToString(selectedType!),
+      'usage_date_provisory': true,
+      'added_quantity': purchaseQuantity,
+      'leftover_quantity': leftoverQuantity
+    });
   }
 
   List<String> get unitList {
@@ -126,10 +154,11 @@ class _EnergyFormState extends State<EnergyForm> {
                       child: const Text('Abbrechen'),
                     ),
                     ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         if (_formKey.currentState!.validate()) {
                           _formKey.currentState!.save();
-                          //Todo: Add energy to db
+                          _manageUnits();
+                          await _addToDatabase();
                           Navigator.of(context).pop();
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(

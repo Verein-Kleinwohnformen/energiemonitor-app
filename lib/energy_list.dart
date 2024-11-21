@@ -37,17 +37,36 @@ class _EnergyListState extends State<EnergyList> {
     );
   }
 
-  manuallyAddedEnergy() {
-    return;
+  _deinMonitor() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Text(
+            "Aktiver Energiemonitor: ${AppUser().activeMonitor!.tinyhouseName}"),
+        if (AppUser().hasMultipleMonitors)
+          IconButton(
+              onPressed: () {
+                setState(() {
+                  AppUser().changeActiveMonitorRead();
+                });
+              },
+              icon: const Icon(Icons.change_circle))
+      ]),
+      if (!AppUser().canEditActiveMonitor)
+        Text("Du kannst bei diesem Monitor keine Daten hinzufügen",
+            style: Theme.of(context)
+                .textTheme
+                .labelSmall!
+                .copyWith(fontWeight: FontWeight.bold))
+    ]);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        floatingActionButton: AppUser().activeMonitor != null
+        floatingActionButton: AppUser().canEditActiveMonitor
             ? FloatingActionButton(
-                onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => EnergyForm())),
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => const EnergyForm())),
                 tooltip: "Energieträger hinzufügen",
                 child: const Icon(Icons.add))
             : null,
@@ -56,7 +75,11 @@ class _EnergyListState extends State<EnergyList> {
             child: AppUser().activeMonitor == null
                 ? const Text("Kein Energiemonitor aktiv!")
                 : StreamBuilder<QuerySnapshot>(
-                    stream: _firestore.collection('manual_input').snapshots(),
+                    stream: _firestore
+                        .collection('manual_input')
+                        .where('monitor_id',
+                            isEqualTo: AppUser().activeMonitor?.id)
+                        .snapshots(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
@@ -68,9 +91,8 @@ class _EnergyListState extends State<EnergyList> {
                             child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                      "Dein Monitor: ${AppUser().activeMonitor!.tinyhouseName}"),
-                                  Center(child: _infoBox(context)),
+                                  _deinMonitor(),
+                                  Center(child: _infoBox(context))
                                 ]));
                       }
 
@@ -81,8 +103,7 @@ class _EnergyListState extends State<EnergyList> {
                           child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                    "Dein Monitor: ${AppUser().activeMonitor!.tinyhouseName}"),
+                                _deinMonitor(),
                                 Expanded(
                                     child: ListView.builder(
                                   itemCount: energyEntries.length +
@@ -95,19 +116,28 @@ class _EnergyListState extends State<EnergyList> {
                                       // Other items: Loaded dynamically from Firebase
                                       final energy =
                                           energyEntries.energyCol[index - 1];
-                                      return Card(
-                                        child: ListTile(
-                                          title: Text(energy.description ??
-                                              'Keine Beschreibung'),
-                                          subtitle: Text(
-                                              energy.type.name ?? 'Kein Typ'),
-                                        ),
-                                      );
+                                      return EnergyCard(energy);
                                     }
                                   },
                                 ))
                               ]));
                     },
                   )));
+  }
+}
+
+class EnergyCard extends StatelessWidget {
+  const EnergyCard(this.energy, {super.key});
+
+  final Energy energy;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        title: Text(energy.description ?? 'Keine Beschreibung'),
+        subtitle: Text(energy.type.name ?? 'Kein Typ'),
+      ),
+    );
   }
 }

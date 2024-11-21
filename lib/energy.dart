@@ -3,6 +3,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum EnergyType { woodSter, woodKg, propane, pellets, oil, diesel, gasoline }
 
+String energyTypeToString(EnergyType energyType) {
+  return energyType.toString().split('.').last;
+}
+
 EnergyType energyTypeFromString(String type) {
   switch (type.toLowerCase()) {
     case 'woodSter':
@@ -32,7 +36,7 @@ class EnergyCollection {
         .map((doc) => Energy.fromFirebase(doc.data() as Map<String, dynamic>))
         .toList()
         .cast<Energy>();
-    ;
+    energyCol.sort((a, b) => b.purchaseDate.compareTo(a.purchaseDate));
   }
   // Empty constructor for initialization
   EnergyCollection.empty();
@@ -58,6 +62,8 @@ class EnergyCollection {
 
     // Add to list
     energyCol.add(newEntry);
+    // Sort the list again
+    energyCol.sort((a, b) => b.purchaseDate.compareTo(a.purchaseDate));
   }
 }
 

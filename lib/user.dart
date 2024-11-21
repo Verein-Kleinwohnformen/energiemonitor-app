@@ -9,7 +9,7 @@ class AppUser {
   User? firebaseUser;
   String? userId;
   String? email;
-  int _activeMonitorRead = 0;
+  int _activeMonitor = 0;
   List<EnergieMonitor> monitorRead = [];
   List<EnergieMonitor> monitorEdit = [];
 
@@ -17,11 +17,11 @@ class AppUser {
   AppUser._internal();
 
   // Remove all user data
-  AppUser.init() {
+  removeUserData() {
     firebaseUser = null;
     userId = null;
     email = null;
-    _activeMonitorRead = 0;
+    _activeMonitor = 0;
     monitorRead = [];
     monitorEdit = [];
   }
@@ -29,9 +29,19 @@ class AppUser {
   // Public getters
   bool get isLoggedIn => firebaseUser != null;
   String? get nickname => firebaseUser?.displayName;
-  int get activeMonitorRead => _activeMonitorRead;
+  bool get hasMultipleMonitors => monitorRead.length > 1 ? true : false;
+  List<String> get monitorReadIdList => monitorRead.map((m) => m.id).toList();
+  List<String> get monitorEditIdList => monitorEdit.map((m) => m.id).toList();
+
+  int get activeMonitorId => _activeMonitor;
   EnergieMonitor? get activeMonitor =>
-      monitorRead.isEmpty ? null : monitorRead[_activeMonitorRead];
+      monitorRead.isEmpty ? null : monitorRead[_activeMonitor];
+  bool get canEditActiveMonitor {
+    if (monitorRead.isEmpty) {
+      return false;
+    }
+    return monitorEditIdList.contains(monitorRead[_activeMonitor].id);
+  }
 
   // Factory constructor to access the singleton instance
   factory AppUser() {
@@ -40,10 +50,10 @@ class AppUser {
 
   // Switch the monitor that is displayed for this user
   void changeActiveMonitorRead() {
-    _activeMonitorRead += 1;
+    _activeMonitor += 1;
 
-    if (_activeMonitorRead > monitorRead.length - 1) {
-      _activeMonitorRead = 0;
+    if (_activeMonitor > monitorRead.length - 1) {
+      _activeMonitor = 0;
     }
   }
 
@@ -91,7 +101,7 @@ class AppUser {
             if (emon != null) {
               monitorEdit.add(emon);
             } else {
-              print("Error: Energieonitor not found!");
+              print("Error: Energiemonitor not found!");
             }
           }
         } else {
@@ -181,8 +191,6 @@ class AppUser {
   // Log out method
   Future<void> signOut() async {
     await _firebaseAuth.signOut();
-
-    // Remove all user data
-    init();
+    removeUserData();
   }
 }

@@ -19,7 +19,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        floatingActionButton: AppUser().monitorRead.length > 1
+        floatingActionButton: AppUser().hasMultipleMonitors
             ? FloatingActionButton(
                 onPressed: () {
                   setState(() {
