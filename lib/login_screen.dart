@@ -96,7 +96,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           AppUser().createUser, "Neues Konto wurde erstellt");
                     },
               child: _isSending
-                  ? const CircularProgressIndicator()
+                  ? const SizedBox(
+                      height: 20, width: 20, child: CircularProgressIndicator())
                   : const Text("Konto erstellen")),
           const SizedBox(width: 10),
           FilledButton.tonal(
@@ -143,7 +144,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       _userAction(AppUser().signIn, "Du bist eingeloggt");
                     },
               child: _isSending
-                  ? const CircularProgressIndicator()
+                  ? const SizedBox(
+                      height: 20, width: 20, child: CircularProgressIndicator())
                   : const Text("Einloggen")),
           const SizedBox(width: 10),
           FilledButton.tonal(
@@ -190,7 +192,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       }
                     },
               child: _isSending
-                  ? const CircularProgressIndicator()
+                  ? const SizedBox(
+                      height: 20, width: 20, child: CircularProgressIndicator())
                   : const Text("Passwort zurücksetzen")),
           const SizedBox(width: 10),
           IconButton(

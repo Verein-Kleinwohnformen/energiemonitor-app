@@ -86,6 +86,10 @@ class AppUser {
           final editIds = userData['monitor_edit'];
           final readIds = userData['monitor_read'];
 
+          // Start from an empty list again
+          monitorRead = [];
+          monitorEdit = [];
+
           // Fetch the monitor data for this user
           for (String id in readIds) {
             final emon = await fetchMonitor(id);
