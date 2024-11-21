@@ -26,6 +26,10 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(theme: kwfTheme, home: const MainScreen());
+    return MaterialApp(
+        theme: kwfTheme,
+        home: Container(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: const MainScreen()));
   }
 }
