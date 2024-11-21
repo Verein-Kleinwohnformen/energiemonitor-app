@@ -8,7 +8,7 @@ String energyTypeToString(EnergyType energyType) {
 }
 
 EnergyType energyTypeFromString(String type) {
-  switch (type.toLowerCase()) {
+  switch (type) {
     case 'woodSter':
       return EnergyType.woodSter;
     case 'woodKg':
@@ -24,7 +24,7 @@ EnergyType energyTypeFromString(String type) {
     case 'gasoline':
       return EnergyType.gasoline;
     default:
-      throw Exception("Unknown energy type");
+      throw Exception("Unknown energy type: ${type}");
   }
 }
 
@@ -87,6 +87,63 @@ class Energy {
     required this.leftoverQuantity,
   });
 
+  String get imageString {
+    switch (type) {
+      case EnergyType.diesel:
+        return 'assets/diesel.png';
+      case EnergyType.woodSter:
+        return 'assets/wood.png';
+      case EnergyType.woodKg:
+        return 'assets/wood.png';
+      case EnergyType.gasoline:
+        return 'assets/benzin.png';
+      case EnergyType.oil:
+        return 'assets/oil.png';
+      case EnergyType.pellets:
+        return 'assets/pellets.png';
+      case EnergyType.propane:
+        return 'assets/propane.png';
+    }
+  }
+
+  String get displayUnit {
+    switch (type) {
+      case EnergyType.diesel:
+        return 'l';
+      case EnergyType.woodSter:
+        return 'Ster';
+      case EnergyType.woodKg:
+        return 'kg';
+      case EnergyType.gasoline:
+        return 'l';
+      case EnergyType.oil:
+        return 'l';
+      case EnergyType.pellets:
+        return 'kg';
+      case EnergyType.propane:
+        return 'kg';
+    }
+  }
+
+  String get formattedDescription {
+    switch (type) {
+      case EnergyType.diesel:
+        return 'Diesel';
+      case EnergyType.woodSter:
+        return 'Holz';
+      case EnergyType.woodKg:
+        return 'Holz';
+      case EnergyType.gasoline:
+        return 'Benzin';
+      case EnergyType.oil:
+        return 'Heizöl';
+      case EnergyType.pellets:
+        return 'Pellets';
+      case EnergyType.propane:
+        return 'Propangas';
+    }
+  }
+
 // Factory constructor to create an Energy instance from Firebase data
   factory Energy.fromFirebase(Map<String, dynamic> data) {
     return Energy(
@@ -95,7 +152,7 @@ class Energy {
       purchaseDate: (data['purchase_date'] as Timestamp).toDate(),
       usageDate: (data['usage_date'] as Timestamp).toDate(),
       type: energyTypeFromString(data['type']),
-      purchaseQuantity: (data['purchase_quantity'] ?? 0).toDouble(),
+      purchaseQuantity: (data['added_quantity'] ?? 0).toDouble(),
       leftoverQuantity: (data['leftover_quantity'] ?? 0).toDouble(),
     );
   }

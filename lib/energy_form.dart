@@ -229,11 +229,11 @@ class _EnergyFormState extends State<EnergyForm> {
     );
   }
 
-  Widget _quantityRow(String text, double field) {
+  Widget _quantityRow(String text, double editVariable) {
     return Row(children: [
       Expanded(
           child: _doubleField(
-        (value) => field = value,
+        (value) => editVariable = value,
         text,
       )),
       Expanded(
@@ -303,7 +303,11 @@ class _EnergyFormState extends State<EnergyForm> {
         }
         return null;
       },
-      onSaved: (value) => onSave(double.parse(value!)),
+      onSaved: (value) {
+        if (value != null && value.trim().isNotEmpty) {
+          onSave(double.parse(value));
+        }
+      },
     );
   }
 

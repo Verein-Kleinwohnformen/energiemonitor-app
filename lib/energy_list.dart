@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kwf_energiemonitor/user.dart';
 import 'package:kwf_energiemonitor/energy.dart';
 import 'package:kwf_energiemonitor/energy_form.dart';
+import 'package:kwf_energiemonitor/energy_card.dart';
 
 class EnergyList extends StatefulWidget {
   const EnergyList({super.key});
@@ -123,21 +124,5 @@ class _EnergyListState extends State<EnergyList> {
                               ]));
                     },
                   )));
-  }
-}
-
-class EnergyCard extends StatelessWidget {
-  const EnergyCard(this.energy, {super.key});
-
-  final Energy energy;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        title: Text(energy.description ?? 'Keine Beschreibung'),
-        subtitle: Text(energy.type.name ?? 'Kein Typ'),
-      ),
-    );
   }
 }
