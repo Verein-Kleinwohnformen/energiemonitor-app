@@ -63,7 +63,7 @@ class _MonitorDisplayState extends State<MonitorDisplay> {
           ),
           subtitle: Text(
             'Deinem Konto ist noch kein Energiemonitor zugeordnet. Melde '
-            'dich bei energiemonitor@kleinwohnformen.ch, damit wir dein Konto'
+            'dich bei energiemonitor@kleinwohnformen.ch, damit wir dein Konto '
             'mit deinem Energiemonitor verlinken können.',
             style: TextStyle(color: Colors.white70),
           ),
