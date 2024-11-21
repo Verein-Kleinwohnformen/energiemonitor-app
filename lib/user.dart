@@ -135,8 +135,8 @@ class AppUser {
           .doc(userId) // Set the document ID to userId
           .set({
         'user_id': userId,
-        'monitor_read': [],
-        'monitor_edit': [],
+        'monitor_read': ['sandbox_monitor'],
+        'monitor_edit': ['sandbox_monitor'],
         'date_created': DateTime.now()
       });
 
