@@ -60,5 +60,4 @@ class DefaultFirebaseOptions {
     authDomain: 'energiemonitor-kwf.firebaseapp.com',
     storageBucket: 'energiemonitor-kwf.appspot.com',
   );
-
 }
