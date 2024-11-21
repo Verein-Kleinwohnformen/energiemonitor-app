@@ -63,66 +63,76 @@ class _EnergyListState extends State<EnergyList> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        floatingActionButton: AppUser().canEditActiveMonitor
-            ? FloatingActionButton(
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => const EnergyForm())),
-                tooltip: "Energieträger hinzufügen",
-                child: const Icon(Icons.add))
-            : null,
-        body: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: AppUser().activeMonitor == null
-                ? const Text("Kein Energiemonitor aktiv!")
-                : StreamBuilder<QuerySnapshot>(
-                    stream: _firestore
-                        .collection('manual_input')
-                        .where('monitor_id',
-                            isEqualTo: AppUser().activeMonitor?.id)
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
+    return Center(
+        child: SizedBox(
+            width: 600,
+            child: Scaffold(
+                floatingActionButton: AppUser().canEditActiveMonitor
+                    ? FloatingActionButton(
+                        onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (context) => const EnergyForm())),
+                        tooltip: "Energieträger hinzufügen",
+                        child: const Icon(Icons.add))
+                    : null,
+                body: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: AppUser().activeMonitor == null
+                        ? const Text("Kein Energiemonitor aktiv!")
+                        : StreamBuilder<QuerySnapshot>(
+                            stream: _firestore
+                                .collection('manual_input')
+                                .where('monitor_id',
+                                    isEqualTo: AppUser().activeMonitor?.id)
+                                .snapshots(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Center(
+                                    child: CircularProgressIndicator());
+                              }
 
-                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                        return Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _deinMonitor(),
-                                  Center(child: _infoBox(context))
-                                ]));
-                      }
+                              if (!snapshot.hasData ||
+                                  snapshot.data!.docs.isEmpty) {
+                                return Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          _deinMonitor(),
+                                          Center(child: _infoBox(context))
+                                        ]));
+                              }
 
-                      energyEntries = EnergyCollection.fromSnapshot(snapshot);
+                              energyEntries =
+                                  EnergyCollection.fromSnapshot(snapshot);
 
-                      return Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _deinMonitor(),
-                                Expanded(
-                                    child: ListView.builder(
-                                  itemCount: energyEntries.length +
-                                      1, // +1 for the static info card
-                                  itemBuilder: (context, index) {
-                                    if (index == 0) {
-                                      // First item: Info card
-                                      return _infoBox(context);
-                                    } else {
-                                      // Other items: Loaded dynamically from Firebase
-                                      final energy =
-                                          energyEntries.energyCol[index - 1];
-                                      return EnergyCard(energy);
-                                    }
-                                  },
-                                ))
-                              ]));
-                    },
-                  )));
+                              return Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _deinMonitor(),
+                                        Expanded(
+                                            child: ListView.builder(
+                                          itemCount: energyEntries.length +
+                                              1, // +1 for the static info card
+                                          itemBuilder: (context, index) {
+                                            if (index == 0) {
+                                              // First item: Info card
+                                              return _infoBox(context);
+                                            } else {
+                                              // Other items: Loaded dynamically from Firebase
+                                              final energy = energyEntries
+                                                  .energyCol[index - 1];
+                                              return EnergyCard(energy);
+                                            }
+                                          },
+                                        ))
+                                      ]));
+                            },
+                          )))));
   }
 }

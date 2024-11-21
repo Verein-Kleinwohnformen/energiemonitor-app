@@ -211,15 +211,17 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
         backgroundColor: Theme.of(context).colorScheme.primary,
         body: Center(
-            child: Card(
-                margin: const EdgeInsets.all(20),
-                child: SingleChildScrollView(
-                    child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Form(
-                            key: _form,
-                            child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: _conditionalLoginScreen())))))));
+            child: SizedBox(
+                width: 500,
+                child: Card(
+                    margin: const EdgeInsets.all(20),
+                    child: SingleChildScrollView(
+                        child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Form(
+                                key: _form,
+                                child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: _conditionalLoginScreen()))))))));
   }
 }
