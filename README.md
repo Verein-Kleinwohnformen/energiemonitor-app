@@ -1,16 +1,30 @@
-# kwf_energiemonitor
+# Das Projekt Energiemonitor
+Dieses Projekt soll es dir ermöglichen, deinen Energieverbrauch zu messen, in Echtzeit zu analysieren, zu verstehen und zu optimieren - mit dem Ziel dass du mit den einfachen aber richtigen Aktionen im Alltag 20% deines Energieverbrauchs einsparen kannst. Dieses Projekt wird vom [Verein Kleinwohnformen](https://kleinwohnformen.ch) getragen und ist in erster Linie auf kleine, unabhängige Wohnformen zugeschnitten. Es ist aber nicht ausgeschlossen, dass du unseren Monitor auch für deine Wohnung bauen und nutzen kannst - wir sind Open Source und Mitmachen im Projekt ist erwünscht! Einfach melden beim [Energiemonitor-Team](mailto:energiemonitor@kleinwohnformen.ch).
 
-A new Flutter project.
+## Projekt-Repos
+- [Referenz-HW und Provisionierung mit BalenaOS](https://github.com/Verein-Kleinwohnformen/energiemonitor-balena-nodered)
+- [NodeRED-Connector neu](https://github.com/Verein-Kleinwohnformen/kwf-energiemonitor-db)
+- [NodeRED Beispiel-Flows (depr.)](https://github.com/Verein-Kleinwohnformen/energiemonitor-nodered-flows)
+- [Energiemonitor-App (Repo)](https://github.com/Verein-Kleinwohnformen/energiemonitor-app)
+- [Energiemonitor-App (Demo)](https://energiemonitor-kwf.web.app/)
 
-## Getting Started
+## Angestrebte Architektur
+Wir befinden uns noch in der Designphase, viele der eingezeichneten Komponenten existieren noch nicht. Wir streben aber das folgende System an:
 
-This project is a starting point for a Flutter application.
+![Hardware-Architektur](img/arch1.png)
 
-A few resources to get you started if this is your first Flutter project:
+![Software-Architektur](img/arch2.png)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+# Energiemonitor-App
+Diese App soll einmal die Interaktion mit dem Energiemonitor-Benutzer abbilden. Mögliche Features:
+- Überprüfen der angeschlossenen Messkanälen, funktionieren alle Sensoren?
+- Download der eigenen Daten über eine bestimmte Zeitspanne
+- Anzeige der Live-Daten (Temperatur, CO2)
+- Energieverbrauch-Statistiken, Vorschläge zur Reduktion, etc
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Aktuell implementierte Features
+Im Moment dient die App lediglich dazu, zusätzliche Energiequellen wie Holz und Gas zu erfassen.
+
+![Screenshot 1](img/mon1.jpg)
+![Screenshot 2](img/mon2.jpg)
+![Screenshot 3](img/mon3.jpg)
