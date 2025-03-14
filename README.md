@@ -25,6 +25,7 @@ Diese App soll einmal die Interaktion mit dem Energiemonitor-Benutzer abbilden. 
 ## Aktuell implementierte Features
 Im Moment dient die App lediglich dazu, zusätzliche Energiequellen wie Holz und Gas zu erfassen.
 
+<img src="img/mon1.jpg" alt="Screenshot 1" width="200"/>
 ![Screenshot 1](img/mon1.jpg)
 ![Screenshot 2](img/mon2.jpg)
 ![Screenshot 3](img/mon3.jpg)
