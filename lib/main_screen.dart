@@ -63,7 +63,7 @@ class _MainScreenState extends State<MainScreen> {
           currentIndex: _activePage,
           onTap: _changePage,
           selectedItemColor: Theme.of(context).colorScheme.primary,
-          unselectedItemColor: Theme.of(context).unselectedWidgetColor,
+          unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
         body: FutureBuilder(
           future: AppUser().init(), // Initialize user once on app startup

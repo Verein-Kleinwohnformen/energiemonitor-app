@@ -15,6 +15,7 @@ class EnergyList extends StatefulWidget {
 class _EnergyListState extends State<EnergyList> {
   EnergyCollection energyEntries = EnergyCollection.empty();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  int _refreshKey = 0;
 
   _infoBox(BuildContext context) {
     return Padding(
@@ -61,6 +62,49 @@ class _EnergyListState extends State<EnergyList> {
     ]);
   }
 
+  Future<EnergyCollection> _loadManualEntries(String deviceId) async {
+    final currentYear = DateTime.now().year;
+    final years = [currentYear, currentYear - 1]; // Current and last year
+
+    final allEntries = <Energy>[];
+
+    // Query each year
+    for (final year in years) {
+      try {
+        final snapshot = await _firestore
+            .collection('devices')
+            .doc(deviceId)
+            .collection('manual')
+            .doc(year.toString())
+            .collection('data')
+            .get();
+
+        for (final doc in snapshot.docs) {
+          try {
+            final energy = Energy.fromFirebase(doc.id, doc.data());
+            allEntries.add(energy);
+          } catch (e) {
+            print('Error parsing entry ${doc.id}: $e');
+          }
+        }
+      } catch (e) {
+        // Year collection might not exist yet, continue
+        print('Error loading year $year: $e');
+      }
+    }
+
+    if (allEntries.isEmpty) {
+      return EnergyCollection.empty();
+    }
+
+    // Sort by purchase date (newest first)
+    allEntries.sort((a, b) => b.purchaseDate.compareTo(a.purchaseDate));
+
+    final collection = EnergyCollection.empty();
+    collection.energyCol = allEntries;
+    return collection;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -69,9 +113,16 @@ class _EnergyListState extends State<EnergyList> {
             child: Scaffold(
                 floatingActionButton: AppUser().canEditActiveMonitor
                     ? FloatingActionButton(
-                        onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (context) => const EnergyForm())),
+                        onPressed: () async {
+                          final result = await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (context) => const EnergyForm()));
+                          if (result == true) {
+                            setState(() {
+                              _refreshKey++;
+                            });
+                          }
+                        },
                         tooltip: "Energieträger hinzufügen",
                         child: const Icon(Icons.add))
                     : null,
@@ -79,12 +130,11 @@ class _EnergyListState extends State<EnergyList> {
                     padding: const EdgeInsets.all(8.0),
                     child: AppUser().activeMonitor == null
                         ? const Text("Kein Energiemonitor aktiv!")
-                        : StreamBuilder<QuerySnapshot>(
-                            stream: _firestore
-                                .collection('manual_input')
-                                .where('monitor_id',
-                                    isEqualTo: AppUser().activeMonitor?.id)
-                                .snapshots(),
+                        : FutureBuilder<EnergyCollection>(
+                            key: ValueKey(
+                                '${AppUser().activeMonitor?.id}-$_refreshKey'),
+                            future:
+                                _loadManualEntries(AppUser().activeMonitor!.id),
                             builder: (context, snapshot) {
                               if (snapshot.connectionState ==
                                   ConnectionState.waiting) {
@@ -92,8 +142,15 @@ class _EnergyListState extends State<EnergyList> {
                                     child: CircularProgressIndicator());
                               }
 
-                              if (!snapshot.hasData ||
-                                  snapshot.data!.docs.isEmpty) {
+                              if (snapshot.hasError) {
+                                return Center(
+                                    child: Text('Fehler: ${snapshot.error}'));
+                              }
+
+                              energyEntries =
+                                  snapshot.data ?? EnergyCollection.empty();
+
+                              if (energyEntries.length == 0) {
                                 return Padding(
                                     padding: const EdgeInsets.all(8.0),
                                     child: Column(
@@ -104,9 +161,6 @@ class _EnergyListState extends State<EnergyList> {
                                           Center(child: _infoBox(context))
                                         ]));
                               }
-
-                              energyEntries =
-                                  EnergyCollection.fromSnapshot(snapshot);
 
                               return Padding(
                                   padding: const EdgeInsets.all(8.0),
@@ -127,7 +181,14 @@ class _EnergyListState extends State<EnergyList> {
                                               // Other items: Loaded dynamically from Firebase
                                               final energy = energyEntries
                                                   .energyCol[index - 1];
-                                              return EnergyCard(energy);
+                                              return EnergyCard(
+                                                energy,
+                                                onDeleted: () {
+                                                  setState(() {
+                                                    _refreshKey++;
+                                                  });
+                                                },
+                                              );
                                             }
                                           },
                                         ))

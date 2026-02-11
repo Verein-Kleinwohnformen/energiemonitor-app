@@ -18,23 +18,89 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final activeMonitor = AppUser().activeMonitor;
+
     return Scaffold(
-        floatingActionButton: AppUser().hasMultipleMonitors
-            ? FloatingActionButton(
-                onPressed: () {
-                  setState(() {
-                    AppUser().changeActiveMonitorRead();
-                  });
-                },
-                tooltip: "Monitor wechseln",
-                child: const Icon(Icons.change_circle))
-            : null,
         body: SingleChildScrollView(
             child: Padding(
                 padding: const EdgeInsets.all(18),
                 child: Column(children: [
-                  const UserText(),
-                  const SizedBox(height: 5),
+                  // User Greeting Banner
+                  const UserGreetingBanner(),
+                  const SizedBox(height: 16),
+
+                  // Monitor Info Card
+                  if (AppUser().isLoggedIn)
+                    Card(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.monitor_heart,
+                          color:
+                              Theme.of(context).colorScheme.onPrimaryContainer,
+                        ),
+                        title: Text(
+                          'Aktueller Monitor',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer,
+                          ),
+                        ),
+                        subtitle: activeMonitor != null
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    activeMonitor.tinyhouseName,
+                                    style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimaryContainer,
+                                    ),
+                                  ),
+                                  Text(
+                                    activeMonitor.tinyhouseLocation,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimaryContainer
+                                          .withOpacity(0.8),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Text(
+                                'Kein Monitor zugewiesen',
+                                style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer,
+                                ),
+                              ),
+                        trailing: AppUser().hasMultipleMonitors
+                            ? IconButton(
+                                icon: Icon(
+                                  Icons.swap_horiz,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer,
+                                ),
+                                tooltip: 'Monitor wechseln',
+                                onPressed: () {
+                                  setState(() {
+                                    AppUser().changeActiveMonitorRead();
+                                  });
+                                },
+                              )
+                            : null,
+                      ),
+                    ),
+                  if (AppUser().isLoggedIn) const SizedBox(height: 16),
+
                   MonitorDisplay(AppUser().activeMonitor)
                 ]))));
   }
@@ -79,45 +145,27 @@ class _MonitorDisplayState extends State<MonitorDisplay> {
       return Container();
     } else if (widget.activeMonitor == null) {
       return _infoBoxNoMonitors(context);
-    } else if (widget.activeMonitor!.id == "sandbox_monitor") {
-      return Align(
-          alignment: Alignment.topLeft,
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _infoBoxNoMonitors(context),
-            Text("Dein Energiemonitor",
-                style: Theme.of(context).textTheme.labelMedium),
-            const SizedBox(height: 5),
-            Text(widget.activeMonitor!.tinyhouseName,
-                style: Theme.of(context).textTheme.headlineSmall),
-            Text(widget.activeMonitor!.tinyhouseLocation,
-                style: Theme.of(context).textTheme.labelLarge),
-          ]));
-    } else {
-      return Align(
-          alignment: Alignment.topLeft,
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text("Dein Energiemonitor",
-                style: Theme.of(context).textTheme.labelMedium),
-            const SizedBox(height: 5),
-            Text(widget.activeMonitor!.tinyhouseName,
-                style: Theme.of(context).textTheme.headlineSmall),
-            Text(widget.activeMonitor!.tinyhouseLocation,
-                style: Theme.of(context).textTheme.labelLarge),
-          ]));
     }
+
+    // Check if user only has sandbox monitor (no real monitor assigned)
+    final hasOnlySandbox = AppUser().monitorReadIdList.length == 1 &&
+        AppUser().monitorReadIdList.contains("sandbox_monitor");
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      // Show warning only if user has ONLY sandbox monitor
+      if (hasOnlySandbox) _infoBoxNoMonitors(context),
+    ]);
   }
 }
 
-class UserText extends StatefulWidget {
-  const UserText({super.key});
+class UserGreetingBanner extends StatefulWidget {
+  const UserGreetingBanner({super.key});
 
   @override
-  State<UserText> createState() => _UserTextState();
+  State<UserGreetingBanner> createState() => _UserGreetingBannerState();
 }
 
-class _UserTextState extends State<UserText> {
+class _UserGreetingBannerState extends State<UserGreetingBanner> {
   final form = GlobalKey<FormState>();
   String? enteredName = '';
   bool isEdit = false;
@@ -148,7 +196,11 @@ class _UserTextState extends State<UserText> {
 
   Widget nameInputField() {
     return TextFormField(
-        decoration: const InputDecoration(labelText: 'Neuer Nutzername'),
+        decoration: const InputDecoration(
+          labelText: 'Neuer Nutzername',
+          filled: true,
+          fillColor: Colors.white,
+        ),
         keyboardType: TextInputType.name,
         maxLength: 20,
         autocorrect: false,
@@ -166,38 +218,84 @@ class _UserTextState extends State<UserText> {
 
   @override
   Widget build(BuildContext context) {
+    if (!AppUser().isLoggedIn) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context)
+              .colorScheme
+              .surfaceContainerHighest
+              .withOpacity(0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            const Text('👋', style: TextStyle(fontSize: 32)),
+            const SizedBox(width: 12),
+            Text(
+              'Hallo! Bitte melde dich an.',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+          ],
+        ),
+      );
+    }
+
     return Form(
-        key: form,
-        child: Row(children: [
-          !AppUser().isLoggedIn
-              ? const Text("Hallo, du bist ausgeloggt.")
-              : !isEdit
-                  ? AppUser().nickname == null
-                      ? const Text("Hallo, Nutzer ohne Namen!")
-                      : Text("Hallo ${AppUser().nickname}")
-                  : SizedBox(width: 200, child: nameInputField()),
-          const SizedBox(width: 5),
-          if (AppUser().isLoggedIn)
+      key: form,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context)
+              .colorScheme
+              .surfaceContainerHighest
+              .withOpacity(0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            if (!isEdit) const Text('👋', style: TextStyle(fontSize: 32)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: !isEdit
+                  ? Text(
+                      'Hallo ${AppUser().nickname ?? "Gast"}!',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    )
+                  : nameInputField(),
+            ),
+            const SizedBox(width: 8),
             isSending
                 ? const SizedBox(
-                    width: 18, height: 18, child: CircularProgressIndicator())
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2))
                 : isEdit
                     ? IconButton(
-                        onPressed: (() {
-                          sendNewNickname();
-                        }),
-                        tooltip: "Name ändern",
-                        icon: const Icon(Icons.send),
-                        iconSize: 18)
+                        onPressed: sendNewNickname,
+                        tooltip: "Name speichern",
+                        icon: const Icon(Icons.check_circle),
+                      )
                     : IconButton(
-                        onPressed: (() {
+                        onPressed: () {
                           setState(() {
                             isEdit = true;
                           });
-                        }),
+                        },
                         tooltip: "Name ändern",
-                        icon: const Icon(Icons.edit_sharp),
-                        iconSize: 18)
-        ]));
+                        icon: const Icon(Icons.edit),
+                      ),
+          ],
+        ),
+      ),
+    );
   }
 }

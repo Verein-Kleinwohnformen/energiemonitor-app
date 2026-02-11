@@ -4,9 +4,10 @@ import 'package:kwf_energiemonitor/user.dart';
 import 'package:intl/intl.dart'; // For formatting dates
 
 class EnergyCard extends StatelessWidget {
-  const EnergyCard(this.energy, {super.key});
+  const EnergyCard(this.energy, {super.key, this.onDeleted});
 
   final Energy energy;
+  final VoidCallback? onDeleted;
 
   @override
   Widget build(BuildContext context) {
@@ -120,6 +121,12 @@ class EnergyCard extends StatelessWidget {
                   // If the user confirmed, delete the entry
                   if (confirmed == true) {
                     await energy.delete();
+                    onDeleted?.call();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Eintrag gelöscht!")),
+                      );
+                    }
                   }
                 },
               )

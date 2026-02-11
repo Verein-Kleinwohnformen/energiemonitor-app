@@ -39,6 +39,21 @@ class EnergyCollection {
         .cast<Energy>();
     energyCol.sort((a, b) => b.purchaseDate.compareTo(a.purchaseDate));
   }
+
+  // Create from multiple snapshots (for querying multiple years)
+  EnergyCollection.fromMultipleSnapshots(List<dynamic> snapshots) {
+    for (var snapshot in snapshots) {
+      if (snapshot.docs.isNotEmpty) {
+        energyCol.addAll(snapshot.docs
+            .map((doc) =>
+                Energy.fromFirebase(doc.id, doc.data() as Map<String, dynamic>))
+            .toList()
+            .cast<Energy>());
+      }
+    }
+    energyCol.sort((a, b) => b.purchaseDate.compareTo(a.purchaseDate));
+  }
+
   // Empty constructor for initialization
   EnergyCollection.empty();
 
@@ -48,7 +63,10 @@ class EnergyCollection {
       {required EnergyType type,
       required String description,
       required double purchaseQuantity,
-      required double leftoverQuantity}) {
+      required double leftoverQuantity,
+      required String meteringPoint,
+      String? userId,
+      String? monitorId}) {
     Energy newEntry = Energy(
         firebaseId: '',
         typeCounter: 0,
@@ -57,7 +75,11 @@ class EnergyCollection {
         usageDate: DateTime.now(),
         type: type,
         purchaseQuantity: purchaseQuantity,
-        leftoverQuantity: leftoverQuantity);
+        leftoverQuantity: leftoverQuantity,
+        meteringPoint: meteringPoint,
+        usageDateProvisory: true,
+        userId: userId,
+        monitorId: monitorId);
 
     // Store on firebase
     newEntry.addToFirebase();
@@ -78,6 +100,10 @@ class Energy {
   EnergyType type;
   double purchaseQuantity;
   double leftoverQuantity;
+  String meteringPoint; // M0, M1, M2
+  bool usageDateProvisory;
+  String? userId;
+  String? monitorId;
 
   // Default constructor with optional parameters and initialization
   Energy({
@@ -89,6 +115,10 @@ class Energy {
     required this.type,
     required this.purchaseQuantity,
     required this.leftoverQuantity,
+    required this.meteringPoint,
+    this.usageDateProvisory = true,
+    this.userId,
+    this.monitorId,
   });
 
   String get imageString {
@@ -129,6 +159,23 @@ class Energy {
     }
   }
 
+  double get consumedQuantity {
+    return purchaseQuantity - leftoverQuantity;
+  }
+
+  String get meteringPointDescription {
+    switch (meteringPoint) {
+      case 'M0':
+        return 'Gemischt';
+      case 'M1':
+        return 'Warmwasser';
+      case 'M2':
+        return 'Heizwärme';
+      default:
+        return meteringPoint;
+    }
+  }
+
   String get formattedDescription {
     switch (type) {
       case EnergyType.diesel:
@@ -150,35 +197,231 @@ class Energy {
 
 // Factory constructor to create an Energy instance from Firebase data
   factory Energy.fromFirebase(String id, Map<String, dynamic> data) {
+    // Handle both old and new format
+    final metadata = data['metadata'] as Map<String, dynamic>? ?? {};
+
+    // Extract values from data_points array if present (new format)
+    final dataPoints = data['data_points'] as List<dynamic>? ?? [];
+    final firstPoint =
+        dataPoints.isNotEmpty ? dataPoints[0] as Map<String, dynamic> : {};
+    final values = firstPoint['values'] as Map<String, dynamic>? ?? {};
+
+    // Get timestamps
+    final purchaseTimestamp = metadata['purchase_date'] ??
+        data['start_timestamp'] ??
+        data['timestamp'];
+    final usageTimestamp = metadata['estimated_usage_date'] ??
+        data['end_timestamp'] ??
+        data['timestamp'];
+
     return Energy(
       firebaseId: id,
       typeCounter: data['type_counter'] ?? 0,
-      description: data['description'] ?? '',
-      purchaseDate: (data['purchase_date'] as Timestamp).toDate(),
-      usageDate: (data['usage_date'] as Timestamp).toDate(),
-      type: energyTypeFromString(data['type']),
-      purchaseQuantity: (data['added_quantity'] ?? 0).toDouble(),
-      leftoverQuantity: (data['leftover_quantity'] ?? 0).toDouble(),
+      description: metadata['description'] ?? data['description'] ?? '',
+      purchaseDate: purchaseTimestamp is Timestamp
+          ? purchaseTimestamp.toDate()
+          : DateTime.fromMillisecondsSinceEpoch(purchaseTimestamp as int),
+      usageDate: usageTimestamp is Timestamp
+          ? usageTimestamp.toDate()
+          : DateTime.fromMillisecondsSinceEpoch(usageTimestamp as int),
+      type: energyTypeFromString(
+          metadata['energy_type'] ?? data['type'] ?? 'woodKg'),
+      purchaseQuantity:
+          (values['added_quantity'] ?? data['added_quantity'] ?? 0).toDouble(),
+      leftoverQuantity:
+          (values['leftover_quantity'] ?? data['leftover_quantity'] ?? 0)
+              .toDouble(),
+      meteringPoint: data['metering_point'] ?? 'M0',
+      usageDateProvisory: metadata['usage_date_provisory'] ??
+          data['usage_date_provisory'] ??
+          true,
+      userId: metadata['user_id'] ?? data['user_id'],
+      monitorId: data['device_id'] ?? data['monitor_id'],
     );
   }
 
   delete() async {
+    if (monitorId == null) return;
+
+    final year = purchaseDate.year;
     await FirebaseFirestore.instance
-        .collection('manual_input')
+        .collection('devices')
+        .doc(monitorId)
+        .collection('manual')
+        .doc(year.toString())
+        .collection('data')
         .doc(firebaseId)
         .delete();
   }
 
-  addToFirebase() async {
-    await FirebaseFirestore.instance.collection('manual_input').add({
-      'type_counter': typeCounter,
-      'description': description,
-      'purchase_date': purchaseDate,
-      'usage_date': usageDate,
-      'type': type.name,
-      'purchase_quantity': purchaseQuantity,
-      'leftover_quantity': leftoverQuantity
-    });
+  Future<void> addToFirebase() async {
+    if (monitorId == null) {
+      throw Exception('Monitor ID is required');
+    }
+
+    final db = FirebaseFirestore.instance;
+    final year = purchaseDate.year;
+
+    // Generate UUID for document ID
+    final uuid = _generateUuid();
+
+    // Calculate timestamps in milliseconds
+    final purchaseTimestamp = purchaseDate.millisecondsSinceEpoch;
+    final usageTimestamp = usageDate.millisecondsSinceEpoch;
+    final createdAt = DateTime.now().toUtc().toIso8601String();
+
+    // Create document structure matching API format
+    final documentData = {
+      'sensor_id': 'app_form',
+      'device_id': monitorId,
+      'metering_point': meteringPoint,
+      'date': purchaseDate.toIso8601String().split('T')[0],
+      'day': purchaseDate.day,
+      'year': year,
+      'start_timestamp': purchaseTimestamp,
+      'end_timestamp': purchaseTimestamp,
+      'data_points': [
+        {
+          'timestamp': purchaseTimestamp,
+          'values': {
+            'added_quantity': purchaseQuantity,
+            'leftover_quantity': leftoverQuantity,
+            'consumed_quantity': consumedQuantity,
+            'unit': displayUnit,
+          }
+        }
+      ],
+      'count': 1,
+      'created_at': createdAt,
+      'metadata': {
+        'description': description,
+        'purchase_date': purchaseTimestamp,
+        'estimated_usage_date': usageTimestamp,
+        'usage_date_provisory': usageDateProvisory,
+        'user_id': userId,
+        'energy_type': energyTypeToString(type),
+      }
+    };
+
+    // Write to Firestore: /devices/{device_id}/manual/{year}/{uuid}
+    // year is a COLLECTION, uuid is a DOCUMENT
+    await db
+        .collection('devices')
+        .doc(monitorId)
+        .collection('manual')
+        .doc(year.toString())
+        .collection('data')
+        .doc(uuid)
+        .set(documentData);
+
+    // Update firebaseId for this instance
+    firebaseId = uuid;
+
+    // Update metering point metadata
+    await _updateMeteringPointMetadata(
+        db, monitorId!, meteringPoint, purchaseTimestamp);
+
+    // Update previous entry's estimated usage date
+    await _updatePreviousEntryUsageDate(db, monitorId!, meteringPoint, type);
+  }
+
+  String _generateUuid() {
+    // Simple UUID v4 generation (you might want to use a package like 'uuid')
+    final random = DateTime.now().microsecondsSinceEpoch;
+    return '$random-${meteringPoint}-${energyTypeToString(type)}';
+  }
+
+  Future<void> _updateMeteringPointMetadata(FirebaseFirestore db,
+      String deviceId, String meteringPoint, int timestamp) async {
+    final mpRef = db
+        .collection('devices')
+        .doc(deviceId)
+        .collection('metering_points')
+        .doc(meteringPoint);
+
+    final mpDoc = await mpRef.get();
+
+    if (mpDoc.exists) {
+      // Update existing metering point
+      await mpRef.update({
+        'last_seen': timestamp,
+        'sensor_types': FieldValue.arrayUnion(['app_form']),
+      });
+    } else {
+      // Create new metering point metadata
+      await mpRef.set({
+        'metering_point': meteringPoint,
+        'device_id': deviceId,
+        'sensor_types': ['app_form'],
+        'first_seen': timestamp,
+        'last_seen': timestamp,
+        'value_fields': [
+          'added_quantity',
+          'leftover_quantity',
+          'consumed_quantity',
+          'unit'
+        ],
+        'description': meteringPointDescription,
+      });
+    }
+  }
+
+  Future<void> _updatePreviousEntryUsageDate(FirebaseFirestore db,
+      String deviceId, String meteringPoint, EnergyType energyType) async {
+    // Find the previous entry with same metering point and energy type
+    // that is provisory and occurred before this entry
+
+    // Query the current year and previous year
+    final currentYear = purchaseDate.year;
+    final previousYear = currentYear - 1;
+
+    for (final year in [currentYear, previousYear]) {
+      final snapshot = await db
+          .collection('devices')
+          .doc(deviceId)
+          .collection('manual')
+          .doc(year.toString())
+          .collection('data')
+          .get();
+
+      // Find matching entries
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final metadata = data['metadata'] as Map<String, dynamic>? ?? {};
+
+        // Check if this entry matches our criteria
+        if (data['metering_point'] == meteringPoint &&
+            metadata['energy_type'] == energyTypeToString(energyType) &&
+            metadata['usage_date_provisory'] == true) {
+          final entryPurchaseTimestamp = metadata['purchase_date'] as int;
+          final entryPurchaseDate =
+              DateTime.fromMillisecondsSinceEpoch(entryPurchaseTimestamp);
+
+          // Check if this entry is before our current entry
+          if (entryPurchaseDate.isBefore(purchaseDate)) {
+            // Calculate the actual usage date
+            final actualUsageDate = purchaseDate;
+            final actualUsageTimestamp = actualUsageDate.millisecondsSinceEpoch;
+
+            // Update the previous entry's estimated_usage_date to actual
+            await db
+                .collection('devices')
+                .doc(deviceId)
+                .collection('manual')
+                .doc(year.toString())
+                .collection('data')
+                .doc(doc.id)
+                .update({
+              'metadata.estimated_usage_date': actualUsageTimestamp,
+              'metadata.usage_date_provisory': false,
+            });
+
+            // We found and updated the previous entry, so we're done
+            return;
+          }
+        }
+      }
+    }
   }
 
   // toString method for a readable format

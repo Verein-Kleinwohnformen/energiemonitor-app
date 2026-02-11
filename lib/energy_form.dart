@@ -19,6 +19,7 @@ class _EnergyFormState extends State<EnergyForm> {
   DateTime? usageDate;
   EnergyType? selectedType;
   String? selectedUnit;
+  String? meteringPoint;
   double? purchaseQuantity;
   double? leftoverQuantity;
 
@@ -44,18 +45,24 @@ class _EnergyFormState extends State<EnergyForm> {
   }
 
   Future<void> _addToDatabase() async {
-    // Create entry in database
-    await FirebaseFirestore.instance.collection('manual_input').add({
-      'monitor_id': AppUser().activeMonitor?.id ?? 'no_monitor',
-      'user_id': AppUser().userId ?? 'unauthenticated',
-      'description': description,
-      'purchase_date': purchaseDate,
-      'usage_date': usageDate,
-      'type': energyTypeToString(selectedType!),
-      'usage_date_provisory': true,
-      'added_quantity': purchaseQuantity,
-      'leftover_quantity': leftoverQuantity
-    });
+    // Create Energy instance
+    final energy = Energy(
+      firebaseId: '', // Will be set by addToFirebase
+      typeCounter: 0, // Not used anymore
+      description: description,
+      purchaseDate: purchaseDate!,
+      usageDate: usageDate!,
+      type: selectedType!,
+      purchaseQuantity: purchaseQuantity!,
+      leftoverQuantity: leftoverQuantity!,
+      meteringPoint: meteringPoint!,
+      usageDateProvisory: true,
+      userId: AppUser().userId ?? 'unauthenticated',
+      monitorId: AppUser().activeMonitor?.id,
+    );
+
+    // Save to Firebase
+    await energy.addToFirebase();
   }
 
   List<String> get unitList {
@@ -293,6 +300,40 @@ class _EnergyFormState extends State<EnergyForm> {
     );
   }
 
+  Widget _meteringPointSelector() {
+    final meteringPoints = [
+      {'value': 'M0', 'label': 'M0 - Gemischt'},
+      {'value': 'M1', 'label': 'M1 - Warmwasser'},
+      {'value': 'M2', 'label': 'M2 - Heizwärme'},
+    ];
+
+    return DropdownButtonFormField<String>(
+      decoration: const InputDecoration(
+        labelText: 'Messpunkt',
+        border: OutlineInputBorder(),
+        helperText: 'Wähle den Messpunkt für diesen Energieträger',
+      ),
+      value: meteringPoint,
+      items: meteringPoints.map((mp) {
+        return DropdownMenuItem<String>(
+          value: mp['value'],
+          child: Text(mp['label']!),
+        );
+      }).toList(),
+      onChanged: (value) {
+        setState(() {
+          meteringPoint = value;
+        });
+      },
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Bitte einen Messpunkt wählen';
+        }
+        return null;
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
@@ -310,6 +351,10 @@ class _EnergyFormState extends State<EnergyForm> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _typeSelector(primaryColor),
+                const SizedBox(height: 16),
+                Text("Wähle den Messpunkt",
+                    style: Theme.of(context).textTheme.labelSmall),
+                _meteringPointSelector(),
                 const SizedBox(height: 16),
                 Text("Deine eigene Beschreibung",
                     style: Theme.of(context).textTheme.labelSmall),
@@ -346,7 +391,7 @@ class _EnergyFormState extends State<EnergyForm> {
                           _formKey.currentState!.save();
                           _manageUnits();
                           await _addToDatabase();
-                          Navigator.of(context).pop();
+                          Navigator.of(context).pop(true);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                                 content: Text("Eintrag hinzugefügt!")),
