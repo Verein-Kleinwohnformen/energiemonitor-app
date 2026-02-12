@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kwf_energiemonitor/energy_list.dart';
 import 'package:kwf_energiemonitor/home.dart';
 import 'package:kwf_energiemonitor/data_export.dart';
+import 'package:kwf_energiemonitor/chart_view.dart';
 
 // Defining the pages of the main screen
 List<MainScreenPage> mainScreenPages = [
@@ -16,6 +17,11 @@ List<MainScreenPage> mainScreenPages = [
       label: 'Liste',
       menuIcon: Icons.add_circle,
       widget: const SizedBox(width: 600, child: EnergyList())),
+  MainScreenPage(
+      title: 'Ansicht',
+      label: 'Ansicht',
+      menuIcon: Icons.analytics,
+      widget: const SizedBox(width: 600, child: ChartView())),
   MainScreenPage(
       title: 'Download',
       label: 'Download',

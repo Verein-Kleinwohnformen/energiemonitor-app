@@ -401,18 +401,23 @@ class MeteringPointsGrid extends StatelessWidget {
       );
     }
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.95,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-      ),
-      itemCount: meteringPoints.length,
-      itemBuilder: (context, index) {
-        return MeteringPointCard(meteringPoint: meteringPoints[index]);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Berechne die optimale Anzahl von Spalten basierend auf der Bildschirmbreite
+        final crossAxisCount = constraints.maxWidth > 600 ? 3 : 2;
+        final itemWidth =
+            (constraints.maxWidth - (crossAxisCount - 1) * 8) / crossAxisCount;
+
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: meteringPoints.map((meteringPoint) {
+            return SizedBox(
+              width: itemWidth,
+              child: MeteringPointCard(meteringPoint: meteringPoint),
+            );
+          }).toList(),
+        );
       },
     );
   }

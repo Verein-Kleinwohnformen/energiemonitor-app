@@ -54,6 +54,7 @@ class _MainScreenState extends State<MainScreen> {
           ],
         ),
         bottomNavigationBar: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
           items: <BottomNavigationBarItem>[
             ...mainScreenPages.map((page) {
               return BottomNavigationBarItem(
@@ -63,7 +64,8 @@ class _MainScreenState extends State<MainScreen> {
           currentIndex: _activePage,
           onTap: _changePage,
           selectedItemColor: Theme.of(context).colorScheme.primary,
-          unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
+          unselectedItemColor: Colors.grey,
+          showUnselectedLabels: true,
         ),
         body: FutureBuilder(
           future: AppUser().init(), // Initialize user once on app startup

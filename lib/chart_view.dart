@@ -1,0 +1,675 @@
+import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:kwf_energiemonitor/user.dart';
+import 'package:kwf_energiemonitor/metering_point.dart';
+import 'package:kwf_energiemonitor/metering_point_service.dart';
+import 'package:kwf_energiemonitor/telemetry.dart';
+import 'package:kwf_energiemonitor/telemetry_service.dart';
+
+class ChartView extends StatefulWidget {
+  const ChartView({super.key});
+
+  @override
+  State<ChartView> createState() => _ChartViewState();
+}
+
+class _ChartViewState extends State<ChartView> {
+  final MeteringPointService _meteringPointService = MeteringPointService();
+  final TelemetryService _telemetryService = TelemetryService();
+
+  List<MeteringPoint> _meteringPoints = [];
+  MeteringPoint? _selectedMeteringPoint;
+  String? _selectedSensorId;
+  Set<String> _selectedValues = {};
+  List<TelemetryDataPoint>? _chartData;
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  // Time range selection
+  String _timeRange = 'heute'; // for automatic: 'heute', 'woche', 'custom'
+  // for manual: 'monat', 'jahr', 'zweijahre'
+  DateTime? _customStartDate;
+  DateTime? _customEndDate;
+
+  // Check if selected metering point is manual
+  bool get _isManualMeteringPoint =>
+      _selectedMeteringPoint?.meteringPointId.startsWith('M') ?? false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMeteringPoints();
+  }
+
+  Future<void> _loadMeteringPoints() async {
+    if (!AppUser().isLoggedIn || AppUser().activeMonitor == null) {
+      return;
+    }
+
+    final meteringPoints = await _meteringPointService
+        .fetchMeteringPoints(AppUser().activeMonitor!.id);
+    setState(() {
+      _meteringPoints = meteringPoints;
+      // Reset selection when metering points change
+      _selectedMeteringPoint = null;
+      _selectedSensorId = null;
+      _selectedValues.clear();
+      _chartData = null;
+    });
+  }
+
+  DateTimeRange _getDateRange() {
+    final now = DateTime.now();
+
+    if (_isManualMeteringPoint) {
+      // Manual metering points have different time ranges
+      switch (_timeRange) {
+        case 'monat':
+          final start = DateTime(now.year, now.month, 1, 0, 0, 0);
+          final end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+          return DateTimeRange(start: start, end: end);
+        case 'jahr':
+          final start = DateTime(now.year, 1, 1, 0, 0, 0);
+          final end = DateTime(now.year, 12, 31, 23, 59, 59);
+          return DateTimeRange(start: start, end: end);
+        case 'zweijahre':
+          final start = DateTime(now.year - 1, 1, 1, 0, 0, 0);
+          final end = DateTime(now.year, 12, 31, 23, 59, 59);
+          return DateTimeRange(start: start, end: end);
+        default:
+          final start = DateTime(now.year, now.month, 1, 0, 0, 0);
+          final end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+          return DateTimeRange(start: start, end: end);
+      }
+    } else {
+      // Automatic metering points
+      switch (_timeRange) {
+        case 'heute':
+          final start = DateTime(now.year, now.month, now.day, 0, 0, 0);
+          final end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+          return DateTimeRange(start: start, end: end);
+        case 'woche':
+          final end = now;
+          final start = now.subtract(const Duration(days: 7));
+          return DateTimeRange(start: start, end: end);
+        case 'custom':
+          if (_customStartDate != null && _customEndDate != null) {
+            return DateTimeRange(
+                start: _customStartDate!, end: _customEndDate!);
+          }
+          // Fallback to today
+          final start = DateTime(now.year, now.month, now.day, 0, 0, 0);
+          final end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+          return DateTimeRange(start: start, end: end);
+        default:
+          final start = DateTime(now.year, now.month, now.day, 0, 0, 0);
+          final end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+          return DateTimeRange(start: start, end: end);
+      }
+    }
+  }
+
+  Future<void> _loadChartData() async {
+    if (_selectedMeteringPoint == null ||
+        _selectedSensorId == null ||
+        _selectedValues.isEmpty) {
+      setState(() {
+        _errorMessage =
+            'Bitte wähle Messpunkt, Sensor und mindestens einen Wert aus.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final dateRange = _getDateRange();
+      final data = await _telemetryService.fetchTelemetryData(
+        deviceId: AppUser().activeMonitor!.id,
+        meteringPoint: _selectedMeteringPoint!.meteringPointId,
+        sensorId: _selectedSensorId!,
+        startDate: dateRange.start,
+        endDate: dateRange.end,
+      );
+
+      setState(() {
+        _chartData = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Fehler beim Laden der Daten: $e';
+        _isLoading = false;
+        _chartData = null;
+      });
+    }
+  }
+
+  Future<void> _showCustomDateRangePicker() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: now,
+      initialDateRange: _customStartDate != null && _customEndDate != null
+          ? DateTimeRange(start: _customStartDate!, end: _customEndDate!)
+          : null,
+    );
+
+    if (picked != null) {
+      // Validate 10-day limit for automatic metering points
+      final daysDiff = picked.end.difference(picked.start).inDays;
+
+      if (!_isManualMeteringPoint && daysDiff > 10) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Automatische Messpunkte: Maximal 10 Tage erlaubt'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _customStartDate = picked.start;
+        _customEndDate = picked.end;
+        _timeRange = 'custom';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Info Box
+            Card(
+              color: Colors.blue.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.blue.shade700),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Wähle Monitor, Messpunkt, Zeitraum und Werte, dann klicke "Laden"',
+                        style: TextStyle(color: Colors.blue.shade900),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Monitor Selection
+            if (AppUser().hasMultipleMonitors)
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.monitor_heart),
+                  title: Text(
+                      AppUser().activeMonitor?.tinyhouseName ?? 'Kein Monitor'),
+                  subtitle:
+                      Text(AppUser().activeMonitor?.tinyhouseLocation ?? ''),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.swap_horiz),
+                    onPressed: () {
+                      AppUser().changeActiveMonitorRead();
+                      _loadMeteringPoints();
+                    },
+                  ),
+                ),
+              ),
+
+            // Metering Point Selection
+            if (_meteringPoints.isNotEmpty)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: DropdownButtonFormField<MeteringPoint>(
+                    decoration: const InputDecoration(
+                      labelText: 'Messpunkt',
+                      border: OutlineInputBorder(),
+                    ),
+                    value: _selectedMeteringPoint,
+                    items: _meteringPoints.map((mp) {
+                      final info =
+                          MeteringPointDefinitions.getInfo(mp.meteringPointId);
+                      return DropdownMenuItem(
+                        value: mp,
+                        child: Text('${mp.meteringPointId} - ${info.name}'),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedMeteringPoint = value;
+                        _selectedSensorId = null;
+                        _selectedValues.clear();
+                        _chartData = null;
+                        // Reset time range to default for new metering point type
+                        if (_isManualMeteringPoint) {
+                          _timeRange = 'monat';
+                        } else {
+                          _timeRange = 'heute';
+                        }
+                      });
+                    },
+                  ),
+                ),
+              ),
+
+            // Time Range Selection (shown after metering point is selected)
+            if (_selectedMeteringPoint != null)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Zeitraum',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      if (_isManualMeteringPoint)
+                        // Manual metering points
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            ChoiceChip(
+                              label: const Text('Dieser Monat'),
+                              selected: _timeRange == 'monat',
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setState(() {
+                                    _timeRange = 'monat';
+                                    _chartData = null;
+                                  });
+                                }
+                              },
+                            ),
+                            ChoiceChip(
+                              label: const Text('Dieses Jahr'),
+                              selected: _timeRange == 'jahr',
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setState(() {
+                                    _timeRange = 'jahr';
+                                    _chartData = null;
+                                  });
+                                }
+                              },
+                            ),
+                            ChoiceChip(
+                              label: const Text('Zwei Jahre'),
+                              selected: _timeRange == 'zweijahre',
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setState(() {
+                                    _timeRange = 'zweijahre';
+                                    _chartData = null;
+                                  });
+                                }
+                              },
+                            ),
+                          ],
+                        )
+                      else
+                        // Automatic metering points
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            ChoiceChip(
+                              label: const Text('Heute'),
+                              selected: _timeRange == 'heute',
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setState(() {
+                                    _timeRange = 'heute';
+                                    _chartData = null;
+                                  });
+                                }
+                              },
+                            ),
+                            ChoiceChip(
+                              label: const Text('Diese Woche'),
+                              selected: _timeRange == 'woche',
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setState(() {
+                                    _timeRange = 'woche';
+                                    _chartData = null;
+                                  });
+                                }
+                              },
+                            ),
+                            ChoiceChip(
+                              label: Text(_timeRange == 'custom' &&
+                                      _customStartDate != null
+                                  ? 'Custom (${_customStartDate!.day}.${_customStartDate!.month} - ${_customEndDate!.day}.${_customEndDate!.month})'
+                                  : 'Custom (max 10 Tage)'),
+                              selected: _timeRange == 'custom',
+                              onSelected: (selected) async {
+                                if (selected) {
+                                  await _showCustomDateRangePicker();
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Sensor Selection
+            if (_selectedMeteringPoint != null &&
+                _selectedMeteringPoint!.sensorTypes.isNotEmpty)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: 'Sensor',
+                      border: OutlineInputBorder(),
+                    ),
+                    value: _selectedSensorId,
+                    items: _selectedMeteringPoint!.sensorTypes.map((sensor) {
+                      return DropdownMenuItem(
+                        value: sensor,
+                        child: Text(sensor),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedSensorId = value;
+                        _selectedValues.clear();
+                        _chartData = null;
+                      });
+                    },
+                  ),
+                ),
+              ),
+
+            // Value Selection
+            if (_selectedMeteringPoint != null &&
+                _selectedMeteringPoint!.valueFields.isNotEmpty)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Werte',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children:
+                            _selectedMeteringPoint!.valueFields.map((field) {
+                          return FilterChip(
+                            label: Text(field),
+                            selected: _selectedValues.contains(field),
+                            onSelected: (selected) {
+                              setState(() {
+                                if (selected) {
+                                  _selectedValues.add(field);
+                                } else {
+                                  _selectedValues.remove(field);
+                                }
+                                _chartData = null;
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Load Button
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _isLoading ? null : _loadChartData,
+              icon: _isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.refresh),
+              label: Text(_isLoading ? 'Laden...' : 'Daten laden'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.all(16),
+              ),
+            ),
+
+            // Error Message
+            if (_errorMessage != null)
+              Card(
+                color: Colors.red.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.error, color: Colors.red.shade700),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: TextStyle(color: Colors.red.shade900),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Chart Display
+            if (_chartData != null && _chartData!.isNotEmpty)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Zeitgrafik - ${_selectedMeteringPoint!.meteringPointId}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 300,
+                        child: _buildChart(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // No Data Message
+            if (_chartData != null && _chartData!.isEmpty)
+              Card(
+                color: Colors.orange.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning, color: Colors.orange.shade700),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Keine Daten im gewählten Zeitraum gefunden',
+                          style: TextStyle(color: Colors.black87),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChart() {
+    if (_chartData == null || _chartData!.isEmpty || _selectedValues.isEmpty) {
+      return const Center(child: Text('Keine Daten zum Anzeigen'));
+    }
+
+    // Prepare chart data
+    final List<LineChartBarData> lineChartData = [];
+    final colors = [
+      Colors.blue,
+      Colors.red,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+      Colors.pink,
+      Colors.amber,
+    ];
+
+    int colorIndex = 0;
+    for (final valueField in _selectedValues) {
+      final spots = <FlSpot>[];
+
+      for (int i = 0; i < _chartData!.length; i++) {
+        final point = _chartData![i];
+        final value = point.values[valueField];
+        if (value != null) {
+          spots.add(FlSpot(i.toDouble(), value));
+        }
+      }
+
+      if (spots.isNotEmpty) {
+        lineChartData.add(
+          LineChartBarData(
+            spots: spots,
+            isCurved: true,
+            color: colors[colorIndex % colors.length],
+            barWidth: 2,
+            isStrokeCapRound: true,
+            dotData: FlDotData(show: _chartData!.length < 50),
+            belowBarData: BarAreaData(show: false),
+          ),
+        );
+        colorIndex++;
+      }
+    }
+
+    // Calculate min/max for Y-axis
+    double minY = double.infinity;
+    double maxY = double.negativeInfinity;
+
+    for (final point in _chartData!) {
+      for (final valueField in _selectedValues) {
+        final value = point.values[valueField];
+        if (value != null) {
+          if (value < minY) minY = value;
+          if (value > maxY) maxY = value;
+        }
+      }
+    }
+
+    // Add 10% padding
+    final range = maxY - minY;
+    minY -= range * 0.1;
+    maxY += range * 0.1;
+
+    return LineChart(
+      LineChartData(
+        lineBarsData: lineChartData,
+        minY: minY,
+        maxY: maxY,
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  value.toStringAsFixed(1),
+                  style: const TextStyle(fontSize: 10),
+                );
+              },
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 30,
+              interval: (_chartData!.length / 6).ceilToDouble(),
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index >= 0 && index < _chartData!.length) {
+                  final point = _chartData![index];
+                  final showDate = _timeRange != 'heute';
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      point.formatForChart(showDate: showDate),
+                      style: const TextStyle(fontSize: 9),
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                }
+                return const Text('');
+              },
+            ),
+          ),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        ),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: true,
+          horizontalInterval: (maxY - minY) / 5,
+          getDrawingHorizontalLine: (value) {
+            return FlLine(
+              color: Colors.grey.shade300,
+              strokeWidth: 1,
+            );
+          },
+        ),
+        borderData: FlBorderData(
+          show: true,
+          border: Border.all(color: Colors.grey.shade400, width: 1),
+        ),
+        lineTouchData: LineTouchData(
+          enabled: true,
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipItems: (touchedSpots) {
+              return touchedSpots.map((spot) {
+                final index = spot.x.toInt();
+                if (index >= 0 && index < _chartData!.length) {
+                  final point = _chartData![index];
+                  final valueField =
+                      _selectedValues.elementAt(touchedSpots.indexOf(spot));
+                  return LineTooltipItem(
+                    '${point.formatDateTime()}\n$valueField: ${spot.y.toStringAsFixed(2)}',
+                    TextStyle(
+                        color: spot.bar.color, fontWeight: FontWeight.bold),
+                  );
+                }
+                return null;
+              }).toList();
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
