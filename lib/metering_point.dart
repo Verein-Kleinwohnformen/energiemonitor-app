@@ -178,12 +178,18 @@ class MeteringPointDefinitions {
     ),
     'K0': MeteringPointInfo(
       id: 'K0',
-      name: 'K1-K4 kombiniert',
+      name: 'Wohnkomfort kombiniert',
       unit: '',
       category: MeteringPointCategory.comfort,
     ),
 
     // Material
+    'M0': MeteringPointInfo(
+      id: 'M0',
+      name: 'Gemischt',
+      unit: '',
+      category: MeteringPointCategory.material,
+    ),
     'M1': MeteringPointInfo(
       id: 'M1',
       name: 'Gas in Flaschen',

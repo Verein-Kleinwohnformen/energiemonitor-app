@@ -26,8 +26,10 @@ class MeteringPointService {
         final meteringPoint =
             MeteringPoint.fromFirestore(deviceId, doc.id, data);
 
-        // Nur Messpunkte der letzten 30 Tage berücksichtigen
-        if (meteringPoint.isActive) {
+        // Manuelle Messpunkte (M-Prefix) immer anzeigen
+        // Andere Messpunkte nur wenn in den letzten 30 Tagen aktiv
+        if (meteringPoint.meteringPointId.startsWith('M') ||
+            meteringPoint.isActive) {
           meteringPoints.add(meteringPoint);
         }
       }
@@ -95,8 +97,10 @@ class MeteringPointService {
         final meteringPoint =
             MeteringPoint.fromFirestore(deviceId, doc.id, data);
 
-        // Nur Messpunkte der letzten 30 Tage berücksichtigen
-        if (meteringPoint.isActive) {
+        // Manuelle Messpunkte (M-Prefix) immer anzeigen
+        // Andere Messpunkte nur wenn in den letzten 30 Tagen aktiv
+        if (meteringPoint.meteringPointId.startsWith('M') ||
+            meteringPoint.isActive) {
           meteringPoints.add(meteringPoint);
         }
       }
