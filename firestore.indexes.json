@@ -1,4 +1,125 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "01",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "metering_point", "order": "ASCENDING" },
+        { "fieldPath": "sensor_id", "order": "ASCENDING" },
+        { "fieldPath": "day", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "02",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "metering_point", "order": "ASCENDING" },
+        { "fieldPath": "sensor_id", "order": "ASCENDING" },
+        { "fieldPath": "day", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "03",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "metering_point", "order": "ASCENDING" },
+        { "fieldPath": "sensor_id", "order": "ASCENDING" },
+        { "fieldPath": "day", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "04",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "metering_point", "order": "ASCENDING" },
+        { "fieldPath": "sensor_id", "order": "ASCENDING" },
+        { "fieldPath": "day", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "05",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "metering_point", "order": "ASCENDING" },
+        { "fieldPath": "sensor_id", "order": "ASCENDING" },
+        { "fieldPath": "day", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "06",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "metering_point", "order": "ASCENDING" },
+        { "fieldPath": "sensor_id", "order": "ASCENDING" },
+        { "fieldPath": "day", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "07",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "metering_point", "order": "ASCENDING" },
+        { "fieldPath": "sensor_id", "order": "ASCENDING" },
+        { "fieldPath": "day", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "08",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "metering_point", "order": "ASCENDING" },
+        { "fieldPath": "sensor_id", "order": "ASCENDING" },
+        { "fieldPath": "day", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "09",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "metering_point", "order": "ASCENDING" },
+        { "fieldPath": "sensor_id", "order": "ASCENDING" },
+        { "fieldPath": "day", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "10",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "metering_point", "order": "ASCENDING" },
+        { "fieldPath": "sensor_id", "order": "ASCENDING" },
+        { "fieldPath": "day", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "11",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "metering_point", "order": "ASCENDING" },
+        { "fieldPath": "sensor_id", "order": "ASCENDING" },
+        { "fieldPath": "day", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "12",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "metering_point", "order": "ASCENDING" },
+        { "fieldPath": "sensor_id", "order": "ASCENDING" },
+        { "fieldPath": "day", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

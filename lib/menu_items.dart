@@ -3,6 +3,7 @@ import 'package:kwf_energiemonitor/energy_list.dart';
 import 'package:kwf_energiemonitor/home.dart';
 import 'package:kwf_energiemonitor/data_export.dart';
 import 'package:kwf_energiemonitor/chart_view.dart';
+import 'package:kwf_energiemonitor/impressum_screen.dart';
 
 // Defining the pages of the main screen
 List<MainScreenPage> mainScreenPages = [
@@ -27,6 +28,11 @@ List<MainScreenPage> mainScreenPages = [
       label: 'Download',
       menuIcon: Icons.cloud_download,
       widget: const SizedBox(width: 600, child: DataExportPage())),
+  MainScreenPage(
+      title: 'Impressum',
+      label: 'Info',
+      menuIcon: Icons.info,
+      widget: const SizedBox(width: 600, child: ImpressumScreen())),
 ];
 
 // Main screen page model
