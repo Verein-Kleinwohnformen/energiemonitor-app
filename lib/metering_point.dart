@@ -18,8 +18,8 @@ class MeteringPoint {
     required this.valueFields,
   });
 
-  factory MeteringPoint.fromFirebase(
-      String deviceId, String meteringPointId, Map<dynamic, dynamic> data) {
+  factory MeteringPoint.fromFirestore(
+      String deviceId, String meteringPointId, Map<String, dynamic> data) {
     return MeteringPoint(
       deviceId: deviceId,
       meteringPointId: meteringPointId,

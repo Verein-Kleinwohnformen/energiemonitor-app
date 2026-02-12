@@ -1,35 +1,36 @@
-import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kwf_energiemonitor/metering_point.dart';
 
-/// Service für Zugriff auf Firebase Realtime Database
+/// Service für Zugriff auf Firestore
 class MeteringPointService {
-  final DatabaseReference _database = FirebaseDatabase.instance.ref();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   /// Lädt alle Messpunkte für ein Device (Monitor)
   /// Pfad: devices/{deviceId}/metering_points
   Future<List<MeteringPoint>> fetchMeteringPoints(String deviceId) async {
     try {
-      final snapshot =
-          await _database.child('devices/$deviceId/metering_points').get();
+      final snapshot = await _firestore
+          .collection('devices')
+          .doc(deviceId)
+          .collection('metering_points')
+          .get();
 
-      if (!snapshot.exists) {
+      if (snapshot.docs.isEmpty) {
         return [];
       }
 
       final List<MeteringPoint> meteringPoints = [];
-      final data = snapshot.value as Map<dynamic, dynamic>;
 
-      data.forEach((key, value) {
-        if (value is Map) {
-          final meteringPoint =
-              MeteringPoint.fromFirebase(deviceId, key.toString(), value);
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final meteringPoint =
+            MeteringPoint.fromFirestore(deviceId, doc.id, data);
 
-          // Nur Messpunkte der letzten 30 Tage berücksichtigen
-          if (meteringPoint.isActive) {
-            meteringPoints.add(meteringPoint);
-          }
+        // Nur Messpunkte der letzten 30 Tage berücksichtigen
+        if (meteringPoint.isActive) {
+          meteringPoints.add(meteringPoint);
         }
-      });
+      }
 
       // Sortiere nach Messpunkt-ID (E1, E2, E3, I1, I2, ...)
       meteringPoints.sort((a, b) =>
@@ -77,28 +78,28 @@ class MeteringPointService {
 
   /// Stream für Echtzeit-Updates der Messpunkte
   Stream<List<MeteringPoint>> streamMeteringPoints(String deviceId) {
-    return _database
-        .child('devices/$deviceId/metering_points')
-        .onValue
-        .map((event) {
-      if (!event.snapshot.exists) {
+    return _firestore
+        .collection('devices')
+        .doc(deviceId)
+        .collection('metering_points')
+        .snapshots()
+        .map((snapshot) {
+      if (snapshot.docs.isEmpty) {
         return <MeteringPoint>[];
       }
 
       final List<MeteringPoint> meteringPoints = [];
-      final data = event.snapshot.value as Map<dynamic, dynamic>;
 
-      data.forEach((key, value) {
-        if (value is Map) {
-          final meteringPoint =
-              MeteringPoint.fromFirebase(deviceId, key.toString(), value);
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final meteringPoint =
+            MeteringPoint.fromFirestore(deviceId, doc.id, data);
 
-          // Nur Messpunkte der letzten 30 Tage berücksichtigen
-          if (meteringPoint.isActive) {
-            meteringPoints.add(meteringPoint);
-          }
+        // Nur Messpunkte der letzten 30 Tage berücksichtigen
+        if (meteringPoint.isActive) {
+          meteringPoints.add(meteringPoint);
         }
-      });
+      }
 
       // Sortiere nach Messpunkt-ID
       meteringPoints.sort((a, b) =>
