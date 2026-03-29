@@ -118,6 +118,105 @@ class TelemetryService {
     return fields;
   }
 
+  /// Fetches manual (app_form) data from Firestore
+  /// Path: /devices/{deviceId}/manual/{year}/data/{uuid}
+  ///
+  /// Returns all data points within the date range, sorted by timestamp ascending.
+  Future<List<TelemetryDataPoint>> fetchManualData({
+    required String deviceId,
+    required String meteringPoint,
+    required String sensorId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final List<TelemetryDataPoint> allDataPoints = [];
+
+    for (int year = startDate.year; year <= endDate.year; year++) {
+      final snapshot = await _firestore
+          .collection('devices')
+          .doc(deviceId)
+          .collection('manual')
+          .doc(year.toString())
+          .collection('data')
+          .where('metering_point', isEqualTo: meteringPoint)
+          .where('sensor_id', isEqualTo: sensorId)
+          .get();
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final dataPoints = data['data_points'] as List<dynamic>? ?? [];
+        final mp = data['metering_point'] as String? ?? meteringPoint;
+        final sid = data['sensor_id'] as String? ?? sensorId;
+
+        for (final pointMap in dataPoints) {
+          final point = TelemetryDataPoint.fromMap(
+            pointMap as Map<String, dynamic>,
+            mp,
+            sid,
+          );
+          if (point.timestamp >= startDate.millisecondsSinceEpoch &&
+              point.timestamp <= endDate.millisecondsSinceEpoch) {
+            allDataPoints.add(point);
+          }
+        }
+      }
+    }
+
+    allDataPoints.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return allDataPoints;
+  }
+
+  /// Returns the last manual entry that was recorded strictly before [startDate].
+  /// Searches backwards up to 3 years to find it.
+  Future<TelemetryDataPoint?> fetchLastManualEntryBefore({
+    required String deviceId,
+    required String meteringPoint,
+    required String sensorId,
+    required DateTime startDate,
+  }) async {
+    TelemetryDataPoint? result;
+
+    for (int year = startDate.year; year >= startDate.year - 2; year--) {
+      final snapshot = await _firestore
+          .collection('devices')
+          .doc(deviceId)
+          .collection('manual')
+          .doc(year.toString())
+          .collection('data')
+          .where('metering_point', isEqualTo: meteringPoint)
+          .where('sensor_id', isEqualTo: sensorId)
+          .get();
+
+      final candidates = <TelemetryDataPoint>[];
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final dataPoints = data['data_points'] as List<dynamic>? ?? [];
+        final mp = data['metering_point'] as String? ?? meteringPoint;
+        final sid = data['sensor_id'] as String? ?? sensorId;
+
+        for (final pointMap in dataPoints) {
+          final point = TelemetryDataPoint.fromMap(
+            pointMap as Map<String, dynamic>,
+            mp,
+            sid,
+          );
+          if (point.timestamp < startDate.millisecondsSinceEpoch) {
+            candidates.add(point);
+          }
+        }
+      }
+
+      if (candidates.isNotEmpty) {
+        candidates.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+        result = candidates.last;
+        break; // Found the nearest year with a prior entry
+      }
+    }
+
+    return result;
+  }
+
   /// Calculate min/max values for a specific field
   Map<String, double> calculateMinMax(
     List<TelemetryDataPoint> dataPoints,

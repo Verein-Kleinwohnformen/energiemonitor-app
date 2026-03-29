@@ -98,7 +98,7 @@ class MeteringPoint {
 /// Kategorien für Messpunkte basierend auf Prefix
 enum MeteringPointCategory {
   external, // E1-E3: Externe Messpunkte (grün)
-  internal, // I1-I2: Interne Messpunkte (gelb)
+  internal, // I1-I3: Interne Messpunkte (gelb)
   water, // D1: Wasser (blau)
   comfort, // K0-K4: Wohnkomfort (lila)
   material, // M1-M2: Gas/Brennholz (rot/rosa)
@@ -140,6 +140,12 @@ class MeteringPointDefinitions {
       id: 'I2',
       name: 'Energiebedarf Heizung',
       unit: 'kWh / kg / Ster',
+      category: MeteringPointCategory.internal,
+    ),
+    'I3': MeteringPointInfo(
+      id: 'I3',
+      name: 'Kleinverbraucher',
+      unit: 'kWh',
       category: MeteringPointCategory.internal,
     ),
 

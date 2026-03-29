@@ -34,7 +34,7 @@ class MeteringPointService {
         }
       }
 
-      // Sortiere nach Messpunkt-ID (E1, E2, E3, I1, I2, ...)
+      // Sortiere nach Messpunkt-ID (E1, E2, E3, I1, I2, I3, ...)
       meteringPoints.sort((a, b) =>
           _compareMeteringPointIds(a.meteringPointId, b.meteringPointId));
 
@@ -46,7 +46,7 @@ class MeteringPointService {
   }
 
   /// Vergleicht Messpunkt-IDs für Sortierung
-  /// E1 < E2 < E3 < I1 < I2 < M1 < M2 < D1 < K0 < K1 < K2 < K3 < K4 < A1 < NA
+  /// E1 < E2 < E3 < I1 < I2 < I3 < M1 < M2 < D1 < K0 < K1 < K2 < K3 < K4 < A1 < NA
   int _compareMeteringPointIds(String a, String b) {
     // Extrahiere Prefix (Buchstabe) und Nummer
     final aMatch = RegExp(r'^([A-Z]+)(\d*)$').firstMatch(a);
