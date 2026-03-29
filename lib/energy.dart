@@ -160,6 +160,9 @@ class Energy {
   }
 
   double get consumedQuantity {
+    // This getter returns a naive value (purchaseQuantity - leftoverQuantity) for
+    // display/fallback purposes only. The correct persisted value is computed in
+    // addToFirebase() using the previous entry's total stock.
     return purchaseQuantity - leftoverQuantity;
   }
 
@@ -286,7 +289,8 @@ class Energy {
           'values': {
             'added_quantity': purchaseQuantity,
             'leftover_quantity': leftoverQuantity,
-            'consumed_quantity': consumedQuantity,
+            'consumed_quantity': await _computeConsumedQuantity(
+                db, monitorId!, meteringPoint, type),
             'unit': displayUnit,
           }
         }
@@ -323,6 +327,60 @@ class Energy {
 
     // Update previous entry's estimated usage date
     await _updatePreviousEntryUsageDate(db, monitorId!, meteringPoint, type);
+  }
+
+  /// Computes how much was consumed from the previous entry's stock until now.
+  /// Formula: prevEntry.addedQuantity + prevEntry.leftoverQuantity - currentEntry.leftoverQuantity
+  /// Returns 0 if no previous entry exists.
+  Future<double> _computeConsumedQuantity(FirebaseFirestore db, String deviceId,
+      String meteringPoint, EnergyType energyType) async {
+    final currentYear = purchaseDate.year;
+
+    for (final year in [currentYear, currentYear - 1]) {
+      final snapshot = await db
+          .collection('devices')
+          .doc(deviceId)
+          .collection('manual')
+          .doc(year.toString())
+          .collection('data')
+          .get();
+
+      _TelemetryCandidate? best;
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final metadata = data['metadata'] as Map<String, dynamic>? ?? {};
+        if (data['metering_point'] != meteringPoint) continue;
+        if (metadata['energy_type'] != energyTypeToString(energyType)) continue;
+
+        final ts = metadata['purchase_date'] as int?;
+        if (ts == null) continue;
+        final entryDate = DateTime.fromMillisecondsSinceEpoch(ts);
+        if (!entryDate.isBefore(purchaseDate)) continue;
+
+        // Pick the most recent entry before the current one
+        if (best == null || ts > best.timestamp) {
+          final dataPoints = data['data_points'] as List<dynamic>? ?? [];
+          final firstPoint = dataPoints.isNotEmpty
+              ? dataPoints[0] as Map<String, dynamic>
+              : <String, dynamic>{};
+          final values = firstPoint['values'] as Map<String, dynamic>? ?? {};
+          final prevAdded =
+              (values['added_quantity'] ?? 0).toDouble() as double;
+          final prevLeftover =
+              (values['leftover_quantity'] ?? 0).toDouble() as double;
+          best = _TelemetryCandidate(ts, prevAdded + prevLeftover);
+        }
+      }
+
+      if (best != null) {
+        final consumed = best.prevTotal - leftoverQuantity;
+        return consumed < 0 ? 0 : consumed;
+      }
+    }
+
+    // No previous entry — nothing consumed yet
+    return 0;
   }
 
   String _generateUuid() {
@@ -430,4 +488,13 @@ class Energy {
     final dateFormatter = DateFormat('yyyy-MM-dd');
     return 'Energy(counter: $typeCounter, description: "$description", purchaseDate: ${dateFormatter.format(purchaseDate)}, usageDate: ${dateFormatter.format(usageDate)}, type: $type, purchaseQuantity: $purchaseQuantity, leftoverQuantity: $leftoverQuantity)';
   }
+}
+
+/// Lightweight helper used by [Energy._computeConsumedQuantity].
+class _TelemetryCandidate {
+  final int timestamp;
+  final double
+      prevTotal; // addedQuantity + leftoverQuantity of the previous entry
+
+  _TelemetryCandidate(this.timestamp, this.prevTotal);
 }

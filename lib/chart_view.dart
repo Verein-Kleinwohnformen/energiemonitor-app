@@ -27,12 +27,6 @@ class _ChartViewState extends State<ChartView> {
   String? _errorMessage;
   bool _isManualChart = false;
 
-  // Zoom / pan state
-  double _zoomFactor = 1.0;
-  double _panOffset = 0.0;
-  double _scaleStartFactor = 1.0;
-  double _chartWidth = 300.0;
-
   // Time range selection
   String _timeRange = 'heute'; // for automatic: 'heute', 'woche', 'custom'
   // for manual: 'monat', 'jahr', 'zweijahre'
@@ -164,18 +158,6 @@ class _ChartViewState extends State<ChartView> {
     return result;
   }
 
-  /// Returns the visible [minX, maxX] window based on the current zoom and pan state.
-  (double, double) _computeVisibleRange(double fullMin, double fullMax) {
-    if (_zoomFactor <= 1.0) return (fullMin, fullMax);
-    final fullSpan = fullMax - fullMin;
-    if (fullSpan <= 0) return (fullMin, fullMax);
-    final visibleSpan = fullSpan / _zoomFactor;
-    final maxPanOffset = 1.0 - 1.0 / _zoomFactor;
-    final clampedOffset = _panOffset.clamp(0.0, maxPanOffset);
-    final minX = fullMin + clampedOffset * fullSpan;
-    return (minX, minX + visibleSpan);
-  }
-
   Future<void> _loadChartData() async {
     if (_selectedMeteringPoint == null ||
         _selectedSensorId == null ||
@@ -215,8 +197,6 @@ class _ChartViewState extends State<ChartView> {
           _chartData = filled;
           _isManualChart = true;
           _isLoading = false;
-          _zoomFactor = 1.0;
-          _panOffset = 0.0;
         });
       } else {
         final data = await _telemetryService.fetchTelemetryData(
@@ -230,8 +210,6 @@ class _ChartViewState extends State<ChartView> {
           _chartData = data;
           _isManualChart = false;
           _isLoading = false;
-          _zoomFactor = 1.0;
-          _panOffset = 0.0;
         });
       }
     } catch (e) {
@@ -598,58 +576,17 @@ class _ChartViewState extends State<ChartView> {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Zeitgrafik - ${_selectedMeteringPoint!.meteringPointId}',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          if (_zoomFactor > 1.01)
-                            IconButton(
-                              icon: const Icon(Icons.zoom_out_map),
-                              tooltip: 'Zoom zurücksetzen',
-                              onPressed: () => setState(() {
-                                _zoomFactor = 1.0;
-                                _panOffset = 0.0;
-                              }),
-                            ),
-                        ],
+                      Text(
+                        'Zeitgrafik - ${_selectedMeteringPoint!.meteringPointId}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          _chartWidth = constraints.maxWidth;
-                          return GestureDetector(
-                            onScaleStart: (details) {
-                              _scaleStartFactor = _zoomFactor;
-                            },
-                            onScaleUpdate: (details) {
-                              setState(() {
-                                _zoomFactor =
-                                    (_scaleStartFactor * details.scale)
-                                        .clamp(1.0, 20.0);
-                                if (_zoomFactor > 1.0) {
-                                  final maxPan = 1.0 - 1.0 / _zoomFactor;
-                                  _panOffset = (_panOffset -
-                                          (details.focalPointDelta.dx /
-                                                  _chartWidth) *
-                                              (1.0 / _zoomFactor))
-                                      .clamp(0.0, maxPan);
-                                } else {
-                                  _panOffset = 0.0;
-                                }
-                              });
-                            },
-                            child: SizedBox(
-                              height: 300,
-                              child: _buildChart(),
-                            ),
-                          );
-                        },
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 300,
+                        child: _buildChart(),
                       ),
                     ],
                   ),
@@ -724,8 +661,7 @@ class _ChartViewState extends State<ChartView> {
             color: colors[colorIndex % colors.length],
             barWidth: 2,
             isStrokeCapRound: true,
-            dotData:
-                FlDotData(show: _chartData!.length < 50 || _zoomFactor >= 3.0),
+            dotData: FlDotData(show: _chartData!.length < 50),
             belowBarData: BarAreaData(show: false),
           ),
         );
@@ -752,17 +688,9 @@ class _ChartViewState extends State<ChartView> {
     minY -= range * 0.1;
     maxY += range * 0.1;
 
-    // Compute visible X window for zoom/pan (index-based)
-    final fullMaxX = (_chartData!.length - 1).toDouble();
-    final (visMinX, visMaxX) = _computeVisibleRange(0.0, fullMaxX);
-    final visibleIntervalRaw = ((visMaxX - visMinX) / 6).ceilToDouble();
-    final visibleInterval = visibleIntervalRaw < 1.0 ? 1.0 : visibleIntervalRaw;
-
     return LineChart(
       LineChartData(
         lineBarsData: lineChartData,
-        minX: visMinX,
-        maxX: visMaxX,
         minY: minY,
         maxY: maxY,
         titlesData: FlTitlesData(
@@ -782,7 +710,7 @@ class _ChartViewState extends State<ChartView> {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 30,
-              interval: visibleInterval,
+              interval: (_chartData!.length / 6).ceilToDouble(),
               getTitlesWidget: (value, meta) {
                 final index = value.toInt();
                 if (index >= 0 && index < _chartData!.length) {
@@ -858,12 +786,9 @@ class _ChartViewState extends State<ChartView> {
       Colors.amber,
     ];
 
-    // Compute full X range from timestamps
-    final fullMinX = _chartData!.first.timestamp.toDouble();
-    final fullMaxX = _chartData!.last.timestamp.toDouble();
-
-    // Apply zoom/pan to get the visible window
-    final (minX, maxX) = _computeVisibleRange(fullMinX, fullMaxX);
+    // Compute X range from timestamps
+    final minX = _chartData!.first.timestamp.toDouble();
+    final maxX = _chartData!.last.timestamp.toDouble();
 
     // Build one step-line series per selected value field
     final List<LineChartBarData> lineChartData = [];
@@ -899,9 +824,10 @@ class _ChartViewState extends State<ChartView> {
       }
     }
 
-    // X-axis label formatter — interval based on visible window
+    // X-axis label formatter
     final dateFormat = DateFormat('dd.MM.yy');
-    final xInterval = (maxX - minX) > 0 ? (maxX - minX) / 5 : 1.0;
+    final xRange = maxX - minX;
+    final xInterval = xRange > 0 ? xRange / 5 : 1.0;
 
     return LineChart(
       LineChartData(
