@@ -630,6 +630,7 @@ class _ChartViewState extends State<ChartView> {
 
     // Prepare chart data
     final List<LineChartBarData> lineChartData = [];
+    final List<String> seriesFields = [];
     final colors = [
       Colors.blue,
       Colors.red,
@@ -665,6 +666,7 @@ class _ChartViewState extends State<ChartView> {
             belowBarData: BarAreaData(show: false),
           ),
         );
+        seriesFields.add(valueField);
         colorIndex++;
       }
     }
@@ -757,8 +759,10 @@ class _ChartViewState extends State<ChartView> {
                 final index = spot.x.toInt();
                 if (index >= 0 && index < _chartData!.length) {
                   final point = _chartData![index];
-                  final valueField =
-                      _selectedValues.elementAt(touchedSpots.indexOf(spot));
+                  final barIdx = spot.barIndex;
+                  final valueField = barIdx < seriesFields.length
+                      ? seriesFields[barIdx]
+                      : '?';
                   return LineTooltipItem(
                     '${point.formatDateTime()}\n$valueField: ${spot.y.toStringAsFixed(2)}',
                     TextStyle(
@@ -792,6 +796,7 @@ class _ChartViewState extends State<ChartView> {
 
     // Build one step-line series per selected value field
     final List<LineChartBarData> lineChartData = [];
+    final List<String> seriesFields = [];
     int colorIndex = 0;
 
     double maxY = 0;
@@ -820,6 +825,7 @@ class _ChartViewState extends State<ChartView> {
             belowBarData: BarAreaData(show: false),
           ),
         );
+        seriesFields.add(valueField);
         colorIndex++;
       }
     }
@@ -898,8 +904,10 @@ class _ChartViewState extends State<ChartView> {
                 } catch (_) {
                   point = null;
                 }
-                final valueField =
-                    _selectedValues.elementAt(touchedSpots.indexOf(spot));
+                final barIdx = spot.barIndex;
+                final valueField = barIdx < seriesFields.length
+                    ? seriesFields[barIdx]
+                    : '?';
                 final dateStr = point != null
                     ? DateFormat('dd.MM.yyyy').format(point.dateTime)
                     : spot.x.toInt().toString();
