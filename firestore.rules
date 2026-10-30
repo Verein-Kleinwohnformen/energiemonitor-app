@@ -22,16 +22,6 @@ service cloud.firestore {
     }
     
     // ========================================
-    // Manual Input (Legacy - Backward Compatibility)
-    // ========================================
-    
-    match /manual_input/{documentId} {
-      // Legacy Collection - nur für eingeloggte User
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-    
-    // ========================================
     // Device-spezifische Manuelle Eingaben
     // ========================================
     
@@ -79,13 +69,22 @@ service cloud.firestore {
     // ========================================
     
     match /users/{userId} {
-      // User darf nur sein eigenes Dokument lesen/schreiben
-      allow read, update: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null && request.auth.uid == userId;
-      // Verhindern dass User monitorRead/monitorEdit selbst ändern kann (optional):
-      // allow update: if request.auth != null 
-      //   && request.auth.uid == userId
-      //   && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['monitorRead', 'monitorEdit']);
+      // Jeder User liest nur sein eigenes Dokument.
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Beim Registrieren bekommt jeder User ausschliesslich den Sandbox-Monitor.
+      // Zugriff auf echte Monitore vergibt nur das Team (Firebase Console / Admin SDK).
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.monitor_read == ['sandbox_monitor']
+        && request.resource.data.monitor_edit == ['sandbox_monitor']
+        && request.resource.data.monitor_api_keys == {};
+
+      // Zugriffsrechte und API-Keys darf der User nicht selbst aendern.
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && !request.resource.data.diff(resource.data).affectedKeys()
+             .hasAny(['monitor_read', 'monitor_edit', 'monitor_api_keys']);
     }
   }
 }
