@@ -36,9 +36,21 @@ class Seed {
 
 class Scenario {
   const Scenario(this.name, this.input,
-      {this.seeds = const [], this.expectSaved = true, this.expectError, this.check});
+      {this.inputNew,
+      this.seeds = const [],
+      this.expectSaved = true,
+      this.expectError,
+      this.expectErrorNew,
+      this.check});
   final String name;
   final FormInput input;
+
+  /// Eingaben im neuen Formular, wenn sie sich bewusst unterscheiden
+  /// (Vorbelegung uebernehmen, Dezimalkomma). Sonst dieselben.
+  final FormInput? inputNew;
+
+  /// Fehlermeldung im neuen Formular, wenn sie anders lautet.
+  final String? expectErrorNew;
   final List<Seed> seeds;
   final bool expectSaved;
 
@@ -138,10 +150,30 @@ final scenarios = <Scenario>[
     check: (e) => expect(values(entryAt(e, d(2026, 9, 1)))['unit'], 'Liter'),
   ),
   Scenario(
+    'Vorbelegung vom letzten Mal ergibt denselben Eintrag',
+    FormInput(type: 'Propangas', mp: 'M1', description: 'Flasche 11 kg',
+        added: '11', leftover: '1.5', purchase: d(2026, 9, 2), usage: d(2026, 11, 1)),
+    // Im neuen Formular nur Traeger, Mengen und Daten: Messpunkt und
+    // Beschreibung kommen aus dem letzten Eintrag.
+    inputNew: FormInput(type: 'Propangas', added: '11', leftover: '1.5',
+        purchase: d(2026, 9, 2), usage: d(2026, 11, 1)),
+    seeds: [Seed(EnergyType.propane, 'M1', d(2026, 6, 1), d(2026, 8, 1), 11, 0.5, 'Flasche 11 kg')],
+    check: (e) => expect(values(entryAt(e, d(2026, 9, 2)))['consumed_quantity'], 10),
+  ),
+  Scenario(
+    'Dezimalkomma im neuen Formular ergibt dieselbe Zahl',
+    FormInput(type: 'Holzpellets', mp: 'M2', description: 'Sack',
+        added: '11.5', leftover: '2.25', purchase: d(2026, 10, 3), usage: d(2026, 11, 3)),
+    inputNew: FormInput(type: 'Holzpellets', mp: 'M2', description: 'Sack',
+        added: '11,5', leftover: ' 2,25 ', purchase: d(2026, 10, 3), usage: d(2026, 11, 3)),
+    check: (e) => expect(values(entryAt(e, d(2026, 10, 3)))['added_quantity'], 11.5),
+  ),
+  Scenario(
     'ohne Energietraeger wird nichts gespeichert',
     FormInput(mp: 'M1', description: 'x', added: '1', leftover: '0',
         purchase: d(2026, 8, 1), usage: d(2026, 9, 1)),
     expectSaved: false, expectError: 'Bitte eine Einheit wählen',
+    expectErrorNew: 'Bitte einen Energieträger wählen',
   ),
   Scenario(
     'ohne Messpunkt wird nichts gespeichert',
@@ -183,6 +215,7 @@ final scenarios = <Scenario>[
 /// Die Formulare, die verglichen werden. Das neue kommt mit dem Umbau dazu.
 final drivers = <FormDriver>[
   LegacyFormDriver(),
+  NewFormDriver(monitorId: kMonitor),
 ];
 
 Future<void> prepare(List<Seed> seeds) async {
@@ -226,27 +259,38 @@ void main() {
       final states = <String, List<String>>{};
       for (final driver in drivers) {
         await prepare(scenario.seeds);
-        final before = await readMonitorState(kMonitor);
+        final uid = AppUser().userId!;
+        List<String> normalized(List<String> state) => state
+            .map((line) => line.replaceAll('"user_id":"$uid"', '"user_id":"<angemeldet>"'))
+            .toList();
+        final before = normalized(await readMonitorState(kMonitor));
 
         await driver.open(tester);
-        await driver.fill(tester, scenario.input);
+        final isNew = driver is NewFormDriver;
+        await driver.fill(tester, isNew ? scenario.inputNew ?? scenario.input : scenario.input);
         await driver.submit(tester);
 
         if (scenario.expectSaved) {
           await driver.waitUntilSaved(tester);
         } else {
           await settle(tester);
-          expect(find.text(scenario.expectError!), findsWidgets,
+          final message =
+              isNew ? scenario.expectErrorNew ?? scenario.expectError! : scenario.expectError!;
+          expect(find.text(message), findsWidgets,
               reason: '${driver.name}: Fehlermeldung fehlt');
           driver.expectStillOpen(tester);
         }
 
-        final after = await readMonitorState(kMonitor);
+        // Jeder Durchlauf hat einen frischen Test-User. Die ID wird fuer den
+        // Vergleich ersetzt, muss aber genau die der angemeldeten Person sein.
+        final after = normalized(await readMonitorState(kMonitor));
         if (!scenario.expectSaved) {
           expect(after, before, reason: '${driver.name}: es wurde etwas gespeichert');
         } else {
           expect(after.length, greaterThan(before.length),
               reason: '${driver.name}: kein neuer Eintrag');
+          expect(after.where((l) => l.contains('"user_id":"<angemeldet>"')), isNotEmpty,
+              reason: '${driver.name}: Eintrag nicht mit der angemeldeten Person gespeichert');
           scenario.check?.call(await readManualEntries(kMonitor));
         }
         states[driver.name] = after;
@@ -259,6 +303,23 @@ void main() {
       });
     });
   }
+
+  testWidgets('neues Formular lehnt negative Mengen ab', (tester) async {
+    await prepare(const []);
+    final driver = NewFormDriver(monitorId: kMonitor);
+    final before = await readMonitorState(kMonitor);
+    await driver.open(tester);
+    await driver.fill(
+        tester,
+        FormInput(type: 'Propangas', mp: 'M1', description: 'x', added: '-1',
+            leftover: '0', purchase: d(2026, 8, 1), usage: d(2026, 9, 1)));
+    await driver.submit(tester);
+    await settle(tester);
+    expect(find.text('Bitte eine Zahl ab 0 eingeben'), findsOneWidget);
+    driver.expectStillOpen(tester);
+    expect(await readMonitorState(kMonitor), before);
+    await driver.close(tester);
+  });
 
   // Dokumentiert das alte Verhalten, das sich bewusst aendert (Entscheid
   // 21.11.2026): Das alte Formular lehnt "11,5" ab.

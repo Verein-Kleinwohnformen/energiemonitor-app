@@ -5,7 +5,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:kwf_energiemonitor/app/firestore_services.dart';
+import 'package:kwf_energiemonitor/app/services.dart';
+import 'package:kwf_energiemonitor/app/session.dart';
+import 'package:kwf_energiemonitor/app/session_scope.dart';
+import 'package:kwf_energiemonitor/capture/energy_form_page.dart';
+import 'package:kwf_energiemonitor/capture/energy_kinds.dart';
 import 'package:kwf_energiemonitor/legacy/energy_form_legacy.dart';
+import 'package:kwf_energiemonitor/theme/kwf_theme.dart';
+import 'package:kwf_energiemonitor/user.dart';
 
 import 'harness.dart';
 
@@ -15,7 +24,7 @@ class FormInput {
     this.type,
     this.unit,
     this.mp,
-    required this.description,
+    this.description,
     required this.added,
     required this.leftover,
     this.purchase,
@@ -31,7 +40,9 @@ class FormInput {
 
   /// 'M0', 'M1' oder 'M2'.
   final String? mp;
-  final String description;
+
+  /// null = nicht anfassen (Vorbelegung des neuen Formulars uebernehmen).
+  final String? description;
   final String added;
   final String leftover;
   final DateTime? purchase;
@@ -106,7 +117,7 @@ class LegacyFormDriver implements FormDriver {
       await _pickFromDropdown(tester, 0, _mpLabels[input.mp]!);
     }
     await tester.enterText(
-        find.widgetWithText(TextFormField, 'Beschreibung'), input.description);
+        find.widgetWithText(TextFormField, 'Beschreibung'), input.description!);
     await tester.enterText(
         find.widgetWithText(TextFormField, 'Hinzugefügte Menge'), input.added);
     await tester.enterText(
@@ -141,6 +152,128 @@ class LegacyFormDriver implements FormDriver {
   @override
   void expectStillOpen(WidgetTester tester) {
     expect(find.byType(EnergyForm), findsOneWidget);
+  }
+
+  @override
+  Future<void> close(WidgetTester tester) async {
+    await tester.pumpWidget(const SizedBox());
+    await settle(tester, const Duration(milliseconds: 200));
+  }
+}
+
+
+/// Das neue Formular (lib/capture/energy_form_page.dart), eingebettet wie in
+/// der App: Session, Dienste, deutsche Datumswaehler.
+class NewFormDriver implements FormDriver {
+  NewFormDriver({required this.monitorId});
+  final String monitorId;
+
+  @override
+  String get name => 'neues Formular';
+
+  static EnergyKind _kind(String label) =>
+      EnergyKind.values.firstWhere((k) => k.label == label);
+
+  @override
+  Future<void> open(WidgetTester tester) async {
+    final user = AppUser();
+    final session = AppSession.fixed(SessionData(
+      uid: user.userId!,
+      email: user.email,
+      monitors: List.of(user.monitorRead),
+      editableIds: user.monitorEditIdList.toSet(),
+    ));
+    final entriesRepo = FirestoreManualEntries();
+    final entries = await entriesRepo.load(monitorId, currentYear: DateTime.now().year);
+    // Die Vorbelegung braucht auch Eintraege aus den Jahren der Testfaelle.
+    final older = await entriesRepo.load(monitorId, currentYear: 2026);
+    final all = {for (final e in [...entries, ...older]) e.energy.firebaseId: e}.values.toList();
+
+    await tester.pumpWidget(SessionScope(
+      session: session,
+      child: AppServices(
+        entries: entriesRepo,
+        status: FirestoreStatus(),
+        household: FirestoreHousehold(uid: () => user.userId!),
+        child: MaterialApp(
+          theme: buildKwfTheme(),
+          locale: const Locale('de', 'CH'),
+          supportedLocales: const [Locale('de', 'CH')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          home: Scaffold(
+            body: RouteHost(
+              builder: (_) => EnergyFormPage(start: FormStart(entries: all)),
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.tap(find.byKey(const ValueKey('route-host-open')));
+    await pumpUntil(tester, () => find.byType(EnergyFormPage).evaluate().isNotEmpty,
+        what: 'neues Formular offen');
+    await settle(tester);
+  }
+
+  Future<void> _tapKey(WidgetTester tester, String key) async {
+    final f = find.byKey(ValueKey(key));
+    await tester.ensureVisible(f);
+    await settle(tester, const Duration(milliseconds: 150));
+    await tester.tap(f);
+    await settle(tester, const Duration(milliseconds: 250));
+  }
+
+  Future<void> _enter(WidgetTester tester, String key, String text) async {
+    final f = find.descendant(of: find.byKey(ValueKey(key)), matching: find.byType(EditableText));
+    await tester.ensureVisible(f);
+    await tester.enterText(f, text);
+    await settle(tester, const Duration(milliseconds: 150));
+  }
+
+  Future<void> _pickDate(WidgetTester tester, String key, DateTime date) async {
+    await _tapKey(tester, key);
+    final toInput = find.byWidgetPredicate((w) =>
+        w is Icon && (w.icon == Icons.edit_outlined || w.icon == Icons.edit));
+    await tester.tap(toInput.last);
+    await settle(tester);
+    final input =
+        find.descendant(of: find.byType(Dialog), matching: find.byType(TextField));
+    await tester.enterText(input.last, DateFormat('dd.MM.yyyy').format(date));
+    await settle(tester, const Duration(milliseconds: 200));
+    await tester.tap(find.text('OK').last);
+    await settle(tester);
+  }
+
+  @override
+  Future<void> fill(WidgetTester tester, FormInput input) async {
+    if (input.type != null) await _tapKey(tester, 'form-type-${_kind(input.type!).name}');
+    if (input.unit == 'Ster') await _tapKey(tester, 'form-unit-Ster');
+    if (input.unit == 'Kg' && input.type == 'Holz') await _tapKey(tester, 'form-unit-Kg');
+    if (input.mp != null) await _tapKey(tester, 'form-mp-${input.mp}');
+    await _enter(tester, 'form-added', input.added);
+    await _enter(tester, 'form-leftover', input.leftover);
+    if (input.purchase != null) await _pickDate(tester, 'form-purchase', input.purchase!);
+    if (input.usage != null) await _pickDate(tester, 'form-usage', input.usage!);
+    if (input.description != null) {
+      await _enter(tester, 'form-description', input.description!);
+    }
+  }
+
+  @override
+  Future<void> submit(WidgetTester tester) async {
+    await tester.tap(find.byKey(const ValueKey('form-save')));
+    await tester.pump();
+  }
+
+  @override
+  Future<void> waitUntilSaved(WidgetTester tester) async {
+    await pumpUntil(tester, () => find.byType(EnergyFormPage).evaluate().isEmpty,
+        what: 'neues Formular gespeichert und geschlossen');
+    await settle(tester);
+  }
+
+  @override
+  void expectStillOpen(WidgetTester tester) {
+    expect(find.byType(EnergyFormPage), findsOneWidget);
   }
 
   @override
