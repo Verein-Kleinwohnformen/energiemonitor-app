@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kwf_energiemonitor/user.dart';
 import 'package:kwf_energiemonitor/energy.dart';
-import 'package:kwf_energiemonitor/energy_form.dart';
+import 'package:kwf_energiemonitor/legacy/energy_form_legacy.dart';
 import 'package:kwf_energiemonitor/energy_card.dart';
 
 class EnergyList extends StatefulWidget {
