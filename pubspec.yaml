@@ -115,19 +115,19 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
+# Web-Icons erzeugt tool/make_app_icons.py (inkl. maskable und Apple-Icon).
+# flutter_launcher_icons nur fuer native Plattformen, aus derselben Vorlage.
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/logo.png"
+  image_path: "tool/icons/app_icon_1024.png"
   min_sdk_android: 21
+  remove_alpha_ios: true
   web:
-    generate: true
-    image_path: "assets/logo.png"
-    background_color: "#FFFFFF"
-    theme_color: "#4A7C59"
+    generate: false
   windows:
     generate: true
-    image_path: "assets/logo.png"
+    image_path: "tool/icons/app_icon_1024.png"
     icon_size: 48
 
 # Der Startbildschirm im Browser ist von Hand gepflegt (web/index.html,
