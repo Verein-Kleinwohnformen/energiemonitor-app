@@ -56,13 +56,22 @@ service cloud.firestore {
     // ========================================
     // Monitore (Energiemonitor-Geräte)
     // ========================================
-    
+
+    // Superadmin: Custom Claim im Login-Token. Er wird nur mit dem Admin SDK
+    // bzw. der Identity Toolkit API gesetzt (tool/admin/), nie aus der App.
+    // Ein Superadmin verwaltet Zugriffe, sieht dadurch aber keine Messdaten:
+    // dafuer braucht auch er einen Eintrag in monitor_read.
+    function isSuperadmin() {
+      return request.auth != null && request.auth.token.superadmin == true;
+    }
+
     match /monitors/{monitorId} {
-      // Nur eingeloggte User können Monitore sehen
-      // Keine Schreibrechte (werden manuell in Firebase Console verwaltet).
-      // Dazu gehoeren study_mode und study_note: Bewohnende koennen den
-      // Studienmodus nicht abschalten.
-      allow read: if request.auth != null;
+      // Einen Monitor lesen nur mit Zugriff darauf. Die ganze Liste (Name und
+      // Ort aller Haeuser) sieht nur der Superadmin. Keine Schreibrechte aus
+      // der App, auch nicht fuer study_mode und study_note: Bewohnende
+      // koennen den Studienmodus nicht abschalten.
+      allow get: if canReadDevice(monitorId) || isSuperadmin();
+      allow list: if isSuperadmin();
       allow write: if false;
 
       // Haushalt (Personen, Wohnflaeche, Label-Wert) mit Verlauf.
@@ -92,38 +101,94 @@ service cloud.firestore {
     }
 
     // ========================================
-    // Rollen (Team Energiemonitor)
+    // User-Dokumente und Zugriffe
     // ========================================
 
-    match /roles/{userId} {
-      // Jede Person sieht nur ihre eigene Rolle (z.B. admin: true).
-      // Schreiben nur in der Firebase Console oder per Admin SDK, nie aus
-      // der App. So kann sich niemand selbst zum Admin machen.
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if false;
+    match /users/{userId} {
+      // Jede Person liest ihr eigenes Dokument. Der Superadmin liest alle
+      // (Liste der Konten mit E-Mail in der Verwaltung).
+      allow get: if request.auth != null && (request.auth.uid == userId || isSuperadmin());
+      allow list: if isSuperadmin();
+
+      // Beim Registrieren bekommt jede Person ausschliesslich den
+      // Sandbox-Monitor. Nur bekannte Felder, keine Rollen oder Rechte.
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['user_id', 'email', 'monitor_read',
+             'monitor_edit', 'monitor_api_keys', 'date_created'])
+        && request.resource.data.user_id == userId
+        && request.resource.data.monitor_read == ['sandbox_monitor']
+        && request.resource.data.monitor_edit == ['sandbox_monitor']
+        && request.resource.data.monitor_api_keys == {}
+        && emailFromToken(request.resource.data);
+
+      // Die Person selbst aendert nur diese Felder (Liste der erlaubten
+      // Felder, nicht der verbotenen: neue Felder sind damit gesperrt).
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['user_name', 'nickname_changed', 'study_dialog_seen', 'email'])
+        && emailFromToken(request.resource.data)
+        && (!('study_dialog_seen' in request.resource.data)
+             || request.resource.data.study_dialog_seen is list);
+
+      // Der Superadmin aendert nur Lesen und Bearbeiten, und nur zusammen
+      // mit einem Protokolleintrag im selben Batch (access_log_id), der genau
+      // diese Aenderung beschreibt.
+      allow update: if isSuperadmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['monitor_read', 'monitor_edit', 'access_log_id',
+                       'access_updated_by', 'access_updated_at'])
+        && validAccess(request.resource.data)
+        && request.resource.data.access_updated_by == request.auth.uid
+        && request.resource.data.access_updated_at == request.time
+        && accessLogged(userId, resource.data, request.resource.data);
+
+      allow delete: if false;
+    }
+
+    // Die E-Mail im User-Dokument ist immer die aus dem Login-Token.
+    function emailFromToken(d) {
+      return !('email' in d) || d.email == request.auth.token.email;
+    }
+
+    // Lesen und Bearbeiten sind Listen von Texten; wer bearbeiten darf, darf
+    // auch lesen.
+    function validAccess(d) {
+      return d.monitor_read is list && d.monitor_edit is list
+        && d.monitor_read.size() <= 100
+        && d.monitor_edit.toSet().difference(d.monitor_read.toSet()).size() == 0;
+    }
+
+    function accessLogged(userId, before, after) {
+      let logPath = /databases/$(database)/documents/admin_log/$(after.access_log_id);
+      let entry = getAfter(logPath).data;
+      return after.access_log_id is string
+        && existsAfter(logPath)
+        && entry.target_uid == userId
+        && entry.actor_uid == request.auth.uid
+        && entry.after_read == after.monitor_read
+        && entry.after_edit == after.monitor_edit
+        && entry.before_read == before.get('monitor_read', [])
+        && entry.before_edit == before.get('monitor_edit', []);
     }
 
     // ========================================
-    // User-Dokumente
+    // Protokoll der Zugriffsaenderungen
     // ========================================
-    
-    match /users/{userId} {
-      // Jeder User liest nur sein eigenes Dokument.
-      allow read: if request.auth != null && request.auth.uid == userId;
 
-      // Beim Registrieren bekommt jeder User ausschliesslich den Sandbox-Monitor.
-      // Zugriff auf echte Monitore vergibt nur das Team (Firebase Console / Admin SDK).
-      allow create: if request.auth != null
-        && request.auth.uid == userId
-        && request.resource.data.monitor_read == ['sandbox_monitor']
-        && request.resource.data.monitor_edit == ['sandbox_monitor']
-        && request.resource.data.monitor_api_keys == {};
-
-      // Zugriffsrechte und API-Keys darf der User nicht selbst aendern.
-      allow update: if request.auth != null
-        && request.auth.uid == userId
-        && !request.resource.data.diff(resource.data).affectedKeys()
-             .hasAny(['monitor_read', 'monitor_edit', 'monitor_api_keys']);
+    match /admin_log/{entryId} {
+      // Nur der Superadmin legt Eintraege an, immer mit sich selbst als
+      // Verfasser und der Serverzeit. Niemand aendert oder loescht sie.
+      allow read: if isSuperadmin();
+      allow create: if isSuperadmin()
+        && request.resource.data.keys().hasOnly(['actor_uid', 'actor_email', 'target_uid',
+             'target_email', 'before_read', 'before_edit', 'after_read', 'after_edit', 'at'])
+        && request.resource.data.actor_uid == request.auth.uid
+        && request.resource.data.at == request.time
+        && request.resource.data.after_read is list
+        && request.resource.data.after_edit is list;
+      allow update, delete: if false;
     }
   }
 }

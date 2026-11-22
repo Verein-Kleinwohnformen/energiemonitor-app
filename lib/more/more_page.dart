@@ -93,6 +93,15 @@ class MorePage extends StatelessWidget {
             onTap: () => context.push(Routes.study),
           ),
         ]),
+      if (session.isSuperadmin)
+        _Group('Verwaltung', [
+          KwfNavRow(
+            icon: Icons.admin_panel_settings_outlined,
+            title: 'Zugänge verwalten',
+            subtitle: 'Konten den Häusern zuordnen, lesen oder bearbeiten',
+            onTap: () => context.push(Routes.admin),
+          ),
+        ]),
       _Group('Über die App', [
         if (!hide)
           KwfNavRow(

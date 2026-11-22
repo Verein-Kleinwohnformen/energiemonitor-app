@@ -21,6 +21,6 @@ Diese Dokumente beschreiben, wie die App aufgebaut ist und warum. Sie sind die �
 | Etappe | Inhalt | Stand |
 |---|---|---|
 | 1 | Neue Navigation, Theme, Studienmodus, Status, Erfassen, Mehr, Haushalt | umgesetzt |
-| 1b | Superadmin mit Verwaltungs-Oberfläche, strengere Rules | geplant |
+| 1b | Superadmin mit Verwaltung der Zugänge, strengere Rules, keine Admin-Rolle | umgesetzt |
 | 2 | Tageswerte in der API (Energie, Klima, Belegung, Verteilung der Brennstoffe) | geplant |
 | 3 | Übersicht und Auswertung mit Diagrammen | geplant |

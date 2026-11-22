@@ -51,7 +51,7 @@ void main() {
   final modes = <String, SessionData Function()>{
     'normaler Modus': () => sessionData(),
     'Studienmodus': () => sessionData(study: true),
-    'Studienmodus, Admin': () => sessionData(study: true, admin: true),
+    'Studienmodus, Superadmin': () => sessionData(study: true, superadmin: true),
   };
 
   testWidgets('Erfassen ist in allen Modi pixelgleich', (tester) async {

@@ -17,8 +17,10 @@ import 'package:integration_test/integration_test.dart';
 
 const kDemoProjectId = 'demo-energiemonitor';
 const kResultMarker = 'INTEGRATION_RESULT ';
-const kFirestoreHost = '127.0.0.1:8080';
-const kAuthHost = '127.0.0.1:9099';
+// Eigene Ports fuer Tests (firebase.test.json), damit ein laufender
+// Dev-Emulator auf 8080/9099 nicht stoert.
+const kFirestoreHost = '127.0.0.1:8180';
+const kAuthHost = '127.0.0.1:9199';
 
 bool _initialized = false;
 
@@ -33,8 +35,8 @@ Future<void> initEmulatorFirebase() async {
       projectId: kDemoProjectId,
     ),
   );
-  FirebaseFirestore.instance.useFirestoreEmulator('127.0.0.1', 8080);
-  await FirebaseAuth.instance.useAuthEmulator('127.0.0.1', 9099);
+  FirebaseFirestore.instance.useFirestoreEmulator('127.0.0.1', 8180);
+  await FirebaseAuth.instance.useAuthEmulator('127.0.0.1', 9199);
   _initialized = true;
 }
 
@@ -85,6 +87,18 @@ class EmulatorAdmin {
     }
   }
 
+  /// Setzt Custom Claims eines Kontos im Auth-Emulator (wie das Admin SDK).
+  static Future<void> setClaims(String uid, Map<String, Object?> claims) async {
+    final res = await http.post(
+      Uri.parse('http://$kAuthHost/identitytoolkit.googleapis.com/v1/projects/$kDemoProjectId/accounts:update'),
+      headers: {..._owner, 'Content-Type': 'application/json'},
+      body: jsonEncode({'localId': uid, 'customAttributes': jsonEncode(claims)}),
+    );
+    if (res.statusCode != 200) {
+      throw StateError('setClaims $uid: ${res.statusCode} ${res.body}');
+    }
+  }
+
   static Map<String, Object?> _toValue(Object? v) {
     if (v == null) return {'nullValue': null};
     if (v is bool) return {'booleanValue': v};
@@ -115,6 +129,7 @@ Future<String> signInTestUser({
   final uid = cred.user!.uid;
   await EmulatorAdmin.setDoc('users/$uid', {
     'user_id': uid,
+    'email': email,
     'monitor_read': monitorRead,
     'monitor_edit': monitorEdit,
     'monitor_api_keys': <String, Object?>{},

@@ -4,6 +4,7 @@
 // Nur unter Linux (kGoldenFiles). Neu erzeugen wie in erfassen_golden_test.dart.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kwf_energiemonitor/admin/admin_page.dart';
 import 'package:kwf_energiemonitor/app/app.dart';
 import 'package:kwf_energiemonitor/app/services.dart';
 import 'package:kwf_energiemonitor/app/session.dart';
@@ -54,10 +55,23 @@ void main() {
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/app_studie_mehr.png'));
   });
 
-  testWidgets('App Admin im Studienmodus: Uebersicht', skip: !kGoldenFiles, (tester) async {
-    await _app(tester, sessionData(study: true, admin: true));
+  testWidgets('Verwaltung: Konten', skip: !kGoldenFiles, (tester) async {
+    await setPhoneSize(tester, size: const Size(390, 844));
+    await tester.pumpWidget(wrap(const AdminPage(),
+        session: AppSession.fixed(sessionData(superadmin: true)), admin: FakeAdmin()));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(AdminPage), matchesGoldenFile('goldens/verwaltung_konten.png'));
+  });
+
+  testWidgets('Verwaltung: Zuordnung eines Kontos', skip: !kGoldenFiles, (tester) async {
+    await setPhoneSize(tester, size: const Size(390, 844));
+    await tester.pumpWidget(wrap(const AdminPage(),
+        session: AppSession.fixed(sessionData(superadmin: true)), admin: FakeAdmin()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('bewohner@example.test'));
+    await tester.pumpAndSettle();
     await expectLater(
-        find.byType(MaterialApp), matchesGoldenFile('goldens/app_admin_uebersicht.png'));
+        find.byType(AccountAccessPage), matchesGoldenFile('goldens/verwaltung_zuordnung.png'));
   });
 
   testWidgets('Formular mit Vorbelegung', skip: !kGoldenFiles, (tester) async {

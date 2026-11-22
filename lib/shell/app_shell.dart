@@ -116,7 +116,6 @@ class _AppShellState extends State<AppShell> {
           children: [
             if (kAppChannel.isNotEmpty) const _ChannelBand(),
             const AppHeader(),
-            if (session.showAdminBand) const _AdminBand(),
             Expanded(child: widget.shell),
           ],
         ),
@@ -142,21 +141,6 @@ class _ChannelBand extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Text('Testversion $kAppChannel, Einträge landen in den echten Daten',
           style: kwfText(12, weight: FontWeight.w600, color: KwfColors.weiss)),
-    );
-  }
-}
-
-class _AdminBand extends StatelessWidget {
-  const _AdminBand();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      color: KwfColors.komfortMittel,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Text('Studienmodus aktiv, Bewohnende sehen nur Erfassen',
-          style: kwfText(12, weight: FontWeight.w600)),
     );
   }
 }

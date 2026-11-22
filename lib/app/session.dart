@@ -1,5 +1,10 @@
 // Zustand der angemeldeten Person: Monitore, aktiver Monitor, Rechte,
 // Studienmodus. Quelle fuer Navigation und Kopfzeile.
+//
+// Zugriff auf Haeuser gibt es nur ueber monitor_read und monitor_edit im
+// User-Dokument. Es gibt keine Rolle, die alle Haeuser sieht. Superadmins
+// (Custom Claim "superadmin" im Login-Token) verwalten diese Zuordnungen,
+// sehen aber selbst nur die Haeuser, die ihnen zugeordnet sind.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -17,7 +22,7 @@ class SessionData {
     this.displayName,
     required this.monitors,
     required this.editableIds,
-    this.isAdmin = false,
+    this.isSuperadmin = false,
     this.studyDialogSeen = const {},
   });
 
@@ -26,8 +31,21 @@ class SessionData {
   final String? displayName;
   final List<EnergieMonitor> monitors;
   final Set<String> editableIds;
-  final bool isAdmin;
+
+  /// Darf Zugriffe verwalten (Custom Claim im Login-Token). Sieht dadurch
+  /// keine zusaetzlichen Haeuser.
+  final bool isSuperadmin;
   final Set<String> studyDialogSeen;
+
+  SessionData copyWith({Set<String>? studyDialogSeen}) => SessionData(
+        uid: uid,
+        email: email,
+        displayName: displayName,
+        monitors: monitors,
+        editableIds: editableIds,
+        isSuperadmin: isSuperadmin,
+        studyDialogSeen: studyDialogSeen ?? this.studyDialogSeen,
+      );
 }
 
 /// Laedt und speichert die Daten der Session (Firestore oder Testdaten).
@@ -61,7 +79,7 @@ class AppSession extends ChangeNotifier {
   String? get displayName => _data?.displayName;
   List<EnergieMonitor> get monitors => _data?.monitors ?? const [];
   bool get hasMultipleMonitors => monitors.length > 1;
-  bool get isAdmin => _data?.isAdmin ?? false;
+  bool get isSuperadmin => _data?.isSuperadmin ?? false;
 
   EnergieMonitor? get active {
     if (monitors.isEmpty) return null;
@@ -73,15 +91,12 @@ class AppSession extends ChangeNotifier {
   /// Der aktive Monitor laeuft im Studienmodus.
   bool get studyModeActive => active?.studyMode ?? false;
 
-  /// Auswertende Ansichten ausblenden: Studienmodus, ausser fuer Admins.
-  bool get hideAnalysis => studyModeActive && !isAdmin;
-
-  /// Admin sieht einen Studienmonitor vollstaendig, mit Hinweisband.
-  bool get showAdminBand => studyModeActive && isAdmin;
+  /// Auswertende Ansichten ausblenden. Gilt fuer alle, auch fuer das Team.
+  bool get hideAnalysis => studyModeActive;
 
   /// Studien-Dialog beim ersten Oeffnen eines Studienmonitors.
   bool get needsStudyDialog =>
-      studyModeActive && !isAdmin && !(_data?.studyDialogSeen.contains(active!.id) ?? true);
+      studyModeActive && !(_data?.studyDialogSeen.contains(active!.id) ?? true);
 
   Future<void> load() async {
     phase = SessionPhase.loading;
@@ -121,15 +136,7 @@ class AppSession extends ChangeNotifier {
     final d = _data;
     final m = active;
     if (d == null || m == null) return;
-    _data = SessionData(
-      uid: d.uid,
-      email: d.email,
-      displayName: d.displayName,
-      monitors: d.monitors,
-      editableIds: d.editableIds,
-      isAdmin: d.isAdmin,
-      studyDialogSeen: {...d.studyDialogSeen, m.id},
-    );
+    _data = d.copyWith(studyDialogSeen: {...d.studyDialogSeen, m.id});
     notifyListeners();
     try {
       await _backend.markStudyDialogSeen(d.uid, m.id);
@@ -164,7 +171,7 @@ class _NoopBackend implements SessionBackend {
 }
 
 /// Firebase: Login aus FirebaseAuth, Rechte aus /users/{uid}, Monitore aus
-/// /monitors, Admin aus /roles/{uid}.
+/// /monitors, Superadmin aus dem Custom Claim im Login-Token.
 class FirebaseSessionBackend implements SessionBackend {
   FirebaseSessionBackend({FirebaseFirestore? db}) : _db = db ?? FirebaseFirestore.instance;
   final FirebaseFirestore _db;
@@ -179,8 +186,10 @@ class FirebaseSessionBackend implements SessionBackend {
     final uid = user.userId!;
 
     final userDoc = await _db.collection('users').doc(uid).get();
+    final data = userDoc.data() ?? const <String, dynamic>{};
+    await _syncEmail(uid, data);
     final seen = <String>{
-      ...((userDoc.data()?['study_dialog_seen'] as List?) ?? const []).map((e) => '$e'),
+      ...((data['study_dialog_seen'] as List?) ?? const []).map((e) => '$e'),
     };
 
     return SessionData(
@@ -189,17 +198,29 @@ class FirebaseSessionBackend implements SessionBackend {
       displayName: user.nickname,
       monitors: List.of(user.monitorRead),
       editableIds: user.monitorEditIdList.toSet(),
-      isAdmin: await _readAdmin(uid),
+      isSuperadmin: await _readSuperadminClaim(),
       studyDialogSeen: seen,
     );
   }
 
-  /// Admin-Rolle aus /roles/{uid}. Fehlt das Dokument oder darf es nicht
-  /// gelesen werden, gilt die Person nicht als Admin.
-  Future<bool> _readAdmin(String uid) async {
+  /// Die Verwaltung listet Konten mit E-Mail. Die E-Mail steht darum auch
+  /// im User-Dokument; die Rules erlauben nur die E-Mail aus dem Login-Token.
+  Future<void> _syncEmail(String uid, Map<String, dynamic> data) async {
+    final tokenEmail = FirebaseAuth.instance.currentUser?.email;
+    if (tokenEmail == null || data.isEmpty || data['email'] == tokenEmail) return;
     try {
-      final doc = await _db.collection('roles').doc(uid).get();
-      return doc.data()?['admin'] == true;
+      await _db.collection('users').doc(uid).update({'email': tokenEmail});
+    } catch (e) {
+      debugPrint('E-Mail im User-Dokument nicht nachgefuehrt: $e');
+    }
+  }
+
+  /// Superadmin steht als Custom Claim im Login-Token. Er wird nur mit dem
+  /// Admin SDK gesetzt (tool/admin/), nie aus der App.
+  Future<bool> _readSuperadminClaim() async {
+    try {
+      final result = await FirebaseAuth.instance.currentUser?.getIdTokenResult(true);
+      return result?.claims?['superadmin'] == true;
     } catch (_) {
       return false;
     }
@@ -219,7 +240,4 @@ class FirebaseSessionBackend implements SessionBackend {
 
   @override
   Future<void> signOut() => AppUser().signOut();
-
-  /// Meldet Aenderungen am Login (z.B. Abmelden in einem anderen Tab).
-  static Stream<User?> authChanges() => FirebaseAuth.instance.authStateChanges();
 }

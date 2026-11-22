@@ -169,6 +169,17 @@ ThemeData buildKwfTheme() {
       iconColor: KwfColors.anthrazit,
       minVerticalPadding: 12,
     ),
+    // Auswahl wie RangeSwitch: aktiv gruen-dunkel mit weisser Schrift (5.08:1).
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.selected) ? KwfColors.gruenDunkel : KwfColors.weiss),
+        foregroundColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.selected) ? KwfColors.weiss : KwfColors.anthrazit),
+        side: const WidgetStatePropertyAll(BorderSide(color: KwfColors.feldrand)),
+        textStyle: WidgetStatePropertyAll(kwfText(12, weight: FontWeight.w600)),
+      ),
+    ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith(
           (s) => s.contains(WidgetState.selected) ? KwfColors.weiss : KwfColors.feldrand),
