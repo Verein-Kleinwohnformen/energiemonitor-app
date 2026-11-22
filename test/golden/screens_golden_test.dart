@@ -1,7 +1,7 @@
 // Bildschirme der App als Golden-Bilder, mit Beispieldaten. Dienen als
 // Referenz fuer das Layout und fallen auf, wenn sich etwas ungewollt aendert.
 //
-// Neu erzeugen: flutter test --update-goldens test/golden
+// Nur unter Linux (kGoldenFiles). Neu erzeugen wie in erfassen_golden_test.dart.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kwf_energiemonitor/app/app.dart';
@@ -33,34 +33,34 @@ Future<void> _app(WidgetTester tester, SessionData data, {String? goTo}) async {
 void main() {
   setUpAll(loadAppFonts);
 
-  testWidgets('App normal: Erfassen', (tester) async {
+  testWidgets('App normal: Erfassen', skip: !kGoldenFiles, (tester) async {
     await _app(tester, sessionData(), goTo: 'Erfassen');
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/app_erfassen.png'));
   });
 
-  testWidgets('App Studienmodus: Erfassen', (tester) async {
+  testWidgets('App Studienmodus: Erfassen', skip: !kGoldenFiles, (tester) async {
     await _app(tester, sessionData(study: true));
     await expectLater(
         find.byType(MaterialApp), matchesGoldenFile('goldens/app_studie_erfassen.png'));
   });
 
-  testWidgets('App normal: Mehr', (tester) async {
+  testWidgets('App normal: Mehr', skip: !kGoldenFiles, (tester) async {
     await _app(tester, sessionData(), goTo: 'Mehr');
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/app_mehr.png'));
   });
 
-  testWidgets('App Studienmodus: Mehr', (tester) async {
+  testWidgets('App Studienmodus: Mehr', skip: !kGoldenFiles, (tester) async {
     await _app(tester, sessionData(study: true), goTo: 'Mehr');
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/app_studie_mehr.png'));
   });
 
-  testWidgets('App Admin im Studienmodus: Uebersicht', (tester) async {
+  testWidgets('App Admin im Studienmodus: Uebersicht', skip: !kGoldenFiles, (tester) async {
     await _app(tester, sessionData(study: true, admin: true));
     await expectLater(
         find.byType(MaterialApp), matchesGoldenFile('goldens/app_admin_uebersicht.png'));
   });
 
-  testWidgets('Formular mit Vorbelegung', (tester) async {
+  testWidgets('Formular mit Vorbelegung', skip: !kGoldenFiles, (tester) async {
     await setPhoneSize(tester, size: const Size(390, 1160));
     await tester.pumpWidget(wrap(
       EnergyFormPage(start: FormStart(entries: sampleEntries())),

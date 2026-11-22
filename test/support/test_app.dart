@@ -16,6 +16,12 @@ import 'package:kwf_energiemonitor/metering_point.dart';
 import 'package:kwf_energiemonitor/monitor.dart';
 import 'package:kwf_energiemonitor/theme/kwf_theme.dart';
 
+/// Golden-Bilder werden unter Linux erzeugt und verglichen (CI), weil die
+/// Schrift unter Windows und macOS minimal anders gerendert wird. Lokal
+/// erzwingen mit GOLDENS=1. Der Vergleich "Erfassen in allen Modi gleich"
+/// (Bild gegen Bild im selben Lauf) laeuft immer.
+final bool kGoldenFiles = Platform.isLinux || Platform.environment['GOLDENS'] == '1';
+
 /// Fester Zeitpunkt fuer alle Tests (Beispieldaten).
 final kNow = DateTime(2026, 11, 21, 14, 30);
 

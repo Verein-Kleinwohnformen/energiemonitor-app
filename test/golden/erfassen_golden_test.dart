@@ -4,7 +4,9 @@
 // Gerendert wird, was auf der Seite steht: Kopfzeile und Inhalt. Die
 // Tab-Leiste unterscheidet sich bewusst (4 oder 2 Tabs) und gehoert nicht dazu.
 //
-// Neu erzeugen: flutter test --update-goldens test/golden
+// Golden-Dateien entstehen unter Linux (CI). Neu erzeugen: CI-Artefakt
+// "goldens" eines fehlgeschlagenen Laufs (failures/*_testImage.png) oder
+// unter Linux: flutter test --update-goldens test/golden
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -58,8 +60,10 @@ void main() {
     for (final mode in modes.entries) {
       await tester.pumpWidget(_page(AppSession.fixed(mode.value())));
       await tester.pumpAndSettle();
-      // Jeder Modus gegen dieselbe Golden-Datei.
-      await expectLater(find.byKey(_boundary), matchesGoldenFile('goldens/erfassen.png'));
+      // Jeder Modus gegen dieselbe Golden-Datei (unter Linux, siehe kGoldenFiles).
+      if (kGoldenFiles) {
+        await expectLater(find.byKey(_boundary), matchesGoldenFile('goldens/erfassen.png'));
+      }
       images[mode.key] = await _pixels(tester);
       await tester.pumpWidget(const SizedBox());
     }
@@ -76,7 +80,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('ENERGIETRÄGER ERFASSEN'), findsNothing);
       expect(find.text('Du kannst bei diesem Monitor keine Daten hinzufügen.'), findsOneWidget);
-      await expectLater(find.byKey(_boundary), matchesGoldenFile('goldens/erfassen_nur_lesen.png'));
+      if (kGoldenFiles) {
+        await expectLater(
+            find.byKey(_boundary), matchesGoldenFile('goldens/erfassen_nur_lesen.png'));
+      }
     }
   });
 
@@ -85,6 +92,8 @@ void main() {
     await tester.pumpWidget(_page(AppSession.fixed(sessionData()), entries: FakeEntries([])));
     await tester.pumpAndSettle();
     expect(find.textContaining('Noch keine Einträge'), findsOneWidget);
-    await expectLater(find.byKey(_boundary), matchesGoldenFile('goldens/erfassen_leer.png'));
+    if (kGoldenFiles) {
+      await expectLater(find.byKey(_boundary), matchesGoldenFile('goldens/erfassen_leer.png'));
+    }
   });
 }

@@ -1,9 +1,9 @@
 // Gilt fuer alle Tests unter test/.
 //
-// Golden-Bilder entstehen je nach Betriebssystem minimal anders (Kantenglaettung
-// der Schrift). Kleine Abweichungen bis 0.5 % werden toleriert. Dass Erfassen
-// im normalen und im Studienmodus gleich aussieht, prueft der Golden-Test
-// zusaetzlich exakt, Bild gegen Bild im selben Lauf.
+// Golden-Dateien werden nur unter Linux verglichen (siehe kGoldenFiles in
+// test/support/test_app.dart); Abweichungen bis 0.5 % werden toleriert.
+// Dass Erfassen im normalen und im Studienmodus gleich aussieht, prueft der
+// Golden-Test zusaetzlich exakt, Bild gegen Bild im selben Lauf.
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
