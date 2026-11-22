@@ -42,7 +42,7 @@
     body { background: #ffffff; }
 
     #splash {
-      position: fixed; inset: 0; z-index: 10;
+      position: fixed; inset: 0; z-index: 10; pointer-events: none;
       background: #ffffff; overflow: hidden;
       font-family: Inter, Arial, Helvetica, sans-serif; color: #333333;
       transition: opacity 240ms ease-out;
@@ -88,13 +88,18 @@
     }
   </style>
   <script>
-    // Von Flutter aufgerufen, sobald die erste Ansicht steht (main.dart).
+    // Blendet den Startbildschirm aus. Ausgeloest durch das Ereignis
+    // "flutter-first-frame", das die Flutter-Engine beim ersten Frame selbst
+    // sendet (unabhaengig von der App-Version, auch wenn der Browser noch
+    // ein aelteres main.dart.js im Cache hat). main.dart ruft die Funktion
+    // zusaetzlich direkt auf.
     function hideLoadingSplash() {
       var s = document.getElementById('splash');
-      if (!s) return;
+      if (!s || s.classList.contains('weg')) return;
       s.classList.add('weg');
       setTimeout(function () { s.remove(); }, 300);
     }
+    window.addEventListener('flutter-first-frame', hideLoadingSplash);
   </script>
 </head>
 <body>
