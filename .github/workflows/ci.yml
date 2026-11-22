@@ -1,0 +1,80 @@
+# Pruefungen fuer jeden Pull Request und jeden Push auf main.
+#
+# - analyse-und-tests: flutter analyze, Unit-, Widget- und Golden-Tests
+#   (darunter der Golden-Test "Erfassen ist in allen Modi pixelgleich").
+# - emulator-tests: Formular-Regressionstest und Firestore-Rules-Tests im
+#   Browser gegen den Firebase-Emulator (Demo-Projekt, kein echtes Firebase).
+#
+# Golden-Bilder entstehen unter Linux. Neu erzeugen (z.B. nach einer gewollten
+# Layout-Aenderung): Bei einem fehlgeschlagenen Lauf liegt das Artefakt
+# "goldens" bereit, die neuen Bilder sind failures/*_testImage.png. Sobald der
+# Workflow auf main liegt, geht es auch mit einem manuellen Lauf "update_goldens".
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      update_goldens:
+        description: Golden-Bilder neu erzeugen und als Artefakt hochladen
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: 3.41.7
+
+jobs:
+  analyse-und-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos
+      - name: Tests
+        if: ${{ !inputs.update_goldens }}
+        run: flutter test
+      - name: Golden-Bilder neu erzeugen
+        if: ${{ inputs.update_goldens }}
+        run: flutter test --update-goldens test/golden
+      - uses: actions/upload-artifact@v4
+        if: ${{ inputs.update_goldens || failure() }}
+        with:
+          name: goldens
+          path: |
+            test/golden/goldens/
+            test/golden/failures/
+          if-no-files-found: ignore
+
+  emulator-tests:
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.update_goldens }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install -g firebase-tools@13.32.0
+      - run: flutter pub get
+      - name: Regressionstest Formular und Rules-Tests
+        env:
+          CHROME_EXECUTABLE: /usr/bin/google-chrome
+        run: node tool/run_integration.mjs

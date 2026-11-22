@@ -1,11 +1,11 @@
 {
     "name": "Energiemonitor",
     "short_name": "Energiemonitor",
-    "start_url": ".",
+    "start_url": "/",
     "display": "standalone",
     "background_color": "#FFFFFF",
-    "theme_color": "#4A7C59",
-    "description": "KWF Energiemonitor",
+    "theme_color": "#8ABB3D",
+    "description": "Energiemonitor des Vereins Kleinwohnformen: Holz, Pellets und Gas erfassen, sehen, ob der Monitor Daten schickt.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
@@ -31,5 +31,6 @@
             "type": "image/png",
             "purpose": "maskable"
         }
-    ]
+    ],
+    "lang": "de-CH"
 }

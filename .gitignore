@@ -45,3 +45,9 @@ app.*.map.json
 # Cloud Functions venv and Firebase hosting cache
 functions/venv/
 .firebase/
+
+# Golden-Tests: Differenzbilder bei Fehlern
+test/golden/failures/
+# Firebase-Emulator-Logs
+firestore-debug.log
+ui-debug.log

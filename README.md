@@ -10,14 +10,31 @@ Wenn du für die Energiestudie einen Monitor baust, nutzt du diese App unter der
 
 ## Funktionen
 
-- Login und Auswahl des aktiven Monitors
-- Messpunkt-Karten mit Online-/Offline-Status, Kategoriefarben und aufklappbaren Sensoren mit Werten
-- Diagramme mit Zoom, Verschieben und frei wählbarem Zeitbereich
-- Manuelle Energieträger erfassen (Holz in Ster oder kg, Pellets, Propan, Heizöl, Diesel, Benzin) mit Kaufdatum und Restmenge
-- Daten-Download als XLSX über die [API](https://github.com/Verein-Kleinwohnformen/energiemonitor-api), maximal 31 Tage
-- Impressum
+- Navigation mit Übersicht, Auswertung, Erfassen und Mehr; Konzept in [docs/konzept/](docs/konzept/README.md)
+- Studienmodus pro Monitor: Bewohnende in der Energiestudie sehen nur Erfassen und Mehr
+- Status-Pille und Systemstatus: kommen die Daten des Monitors an?
+- Energieträger erfassen (Holz in Ster oder kg, Pellets, Propan, Heizöl, Diesel, Benzin) mit Vorrat, Vorbelegung und Erinnerung
+- Haushalt (Personen, Wohnfläche) mit Verlauf
+- Messwerte der Sensoren als Diagramm
+- Daten-Download als XLSX über die [API](https://github.com/Verein-Kleinwohnformen/energiemonitor-api), längere Zeiträume in Monatsdateien
+- Info-Overlay bei jeder Zahl: Quelle, Rechnung, Sicherheit
 
-**Noch nicht umgesetzt:** Energiebilanz und Verbrauchsstatistik, Spartipps, Plausibilitätschecks mit Warnungen.
+**Noch nicht umgesetzt:** Energiebilanz und Verbrauchsstatistik (Übersicht und Auswertung folgen mit den Tageswerten), Spartipps, Plausibilitätschecks mit Warnungen.
+
+## Entwickeln und testen
+
+```
+flutter test                     # Unit-, Widget- und Golden-Tests
+node tool/run_integration.mjs    # Formular-Regressionstest und Rules-Tests im Firebase-Emulator
+```
+
+Lokal mit Beispieldaten, ohne echte Datenbank:
+
+```
+firebase emulators:start --only firestore,auth --project demo-energiemonitor
+node tool/seed_emulator.mjs
+flutter run -d chrome --dart-define=USE_EMULATOR=true
+```
 
 ## Selbst bauen und hosten (Variante B)
 
@@ -26,7 +43,7 @@ Technik: Flutter (Dart `^3.5.3`), Firebase Auth, Firestore, Firebase Hosting. Di
 1. [Flutter](https://docs.flutter.dev/get-started/install) installieren und Repo klonen.
 2. Eigenes Firebase-Projekt anlegen, Authentication (E-Mail/Passwort) und Firestore aktivieren.
 3. Eigene Firebase-Konfiguration erzeugen: `flutterfire configure`. Das ersetzt [`lib/firebase_options.dart`](lib/firebase_options.dart) und die Projekt-ID in `.firebaserc` und `firebase.json`.
-4. Die API-Basis-URL in [`lib/data_export.dart`](lib/data_export.dart) auf deine eigene [API](https://github.com/Verein-Kleinwohnformen/energiemonitor-api) ändern.
+4. Die API-Basis-URL in [`lib/more/export_logic.dart`](lib/more/export_logic.dart) auf deine eigene [API](https://github.com/Verein-Kleinwohnformen/energiemonitor-api) ändern.
 5. Rules und Indizes deployen: `firebase deploy --only firestore`.
 6. Bauen und deployen: `flutter build web`, dann `firebase deploy --only hosting`.
 
