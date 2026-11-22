@@ -5,9 +5,10 @@
 # - emulator-tests: Formular-Regressionstest und Firestore-Rules-Tests im
 #   Browser gegen den Firebase-Emulator (Demo-Projekt, kein echtes Firebase).
 #
-# Golden-Bilder neu erzeugen (z.B. nach einer gewollten Layout-Aenderung oder
-# wenn sie unter Linux minimal anders rendern): Workflow manuell starten mit
-# "update_goldens", die Bilder liegen danach als Artefakt bereit.
+# Golden-Bilder entstehen unter Linux. Neu erzeugen (z.B. nach einer gewollten
+# Layout-Aenderung): Bei einem fehlgeschlagenen Lauf liegt das Artefakt
+# "goldens" bereit, die neuen Bilder sind failures/*_testImage.png. Sobald der
+# Workflow auf main liegt, geht es auch mit einem manuellen Lauf "update_goldens".
 name: CI
 
 on:

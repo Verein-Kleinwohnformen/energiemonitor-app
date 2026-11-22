@@ -1,7 +1,7 @@
 // Bildschirme der App als Golden-Bilder, mit Beispieldaten. Dienen als
 // Referenz fuer das Layout und fallen auf, wenn sich etwas ungewollt aendert.
 //
-// Neu erzeugen: flutter test --update-goldens test/golden
+// Nur unter Linux (kGoldenFiles). Neu erzeugen wie in erfassen_golden_test.dart.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kwf_energiemonitor/admin/admin_page.dart';
@@ -34,28 +34,28 @@ Future<void> _app(WidgetTester tester, SessionData data, {String? goTo}) async {
 void main() {
   setUpAll(loadAppFonts);
 
-  testWidgets('App normal: Erfassen', (tester) async {
+  testWidgets('App normal: Erfassen', skip: !kGoldenFiles, (tester) async {
     await _app(tester, sessionData(), goTo: 'Erfassen');
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/app_erfassen.png'));
   });
 
-  testWidgets('App Studienmodus: Erfassen', (tester) async {
+  testWidgets('App Studienmodus: Erfassen', skip: !kGoldenFiles, (tester) async {
     await _app(tester, sessionData(study: true));
     await expectLater(
         find.byType(MaterialApp), matchesGoldenFile('goldens/app_studie_erfassen.png'));
   });
 
-  testWidgets('App normal: Mehr', (tester) async {
+  testWidgets('App normal: Mehr', skip: !kGoldenFiles, (tester) async {
     await _app(tester, sessionData(), goTo: 'Mehr');
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/app_mehr.png'));
   });
 
-  testWidgets('App Studienmodus: Mehr', (tester) async {
+  testWidgets('App Studienmodus: Mehr', skip: !kGoldenFiles, (tester) async {
     await _app(tester, sessionData(study: true), goTo: 'Mehr');
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/app_studie_mehr.png'));
   });
 
-  testWidgets('Verwaltung: Konten', (tester) async {
+  testWidgets('Verwaltung: Konten', skip: !kGoldenFiles, (tester) async {
     await setPhoneSize(tester, size: const Size(390, 844));
     await tester.pumpWidget(wrap(const AdminPage(),
         session: AppSession.fixed(sessionData(superadmin: true)), admin: FakeAdmin()));
@@ -63,7 +63,7 @@ void main() {
     await expectLater(find.byType(AdminPage), matchesGoldenFile('goldens/verwaltung_konten.png'));
   });
 
-  testWidgets('Verwaltung: Zuordnung eines Kontos', (tester) async {
+  testWidgets('Verwaltung: Zuordnung eines Kontos', skip: !kGoldenFiles, (tester) async {
     await setPhoneSize(tester, size: const Size(390, 844));
     await tester.pumpWidget(wrap(const AdminPage(),
         session: AppSession.fixed(sessionData(superadmin: true)), admin: FakeAdmin()));
@@ -74,7 +74,7 @@ void main() {
         find.byType(AccountAccessPage), matchesGoldenFile('goldens/verwaltung_zuordnung.png'));
   });
 
-  testWidgets('Formular mit Vorbelegung', (tester) async {
+  testWidgets('Formular mit Vorbelegung', skip: !kGoldenFiles, (tester) async {
     await setPhoneSize(tester, size: const Size(390, 1160));
     await tester.pumpWidget(wrap(
       EnergyFormPage(start: FormStart(entries: sampleEntries())),
