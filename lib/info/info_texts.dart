@@ -187,7 +187,8 @@ abstract final class InfoTexts {
     method: 'Ein Tag gilt als bewohnt, wenn das CO2 irgendwann über 600 ppm steigt. Ein '
         'leeres Haus bleibt unter etwa 550 ppm. Wir nehmen den Höchstwert und nicht den '
         'Mittelwert, weil im Sommer bei offenen Fenstern der Mittelwert tief bleibt, auch '
-        'wenn jemand da ist.',
+        'wenn jemand da ist. Bei der Netatmo zählt der Anstieg: Der Höchstwert muss mehr als '
+        '150 ppm über dem üblichen Wert des Tages liegen, weil ihr Nullpunkt mit der Zeit wandert.',
     certainty: 'Berechnet. Kurze Besuche oder offene Fenster den ganzen Tag können falsch '
         'erkannt werden. Gegenprobe mit dem Stromverbrauch der Kleinverbraucher.',
   );

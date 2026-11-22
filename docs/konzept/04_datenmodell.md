@@ -125,3 +125,51 @@ Damit liest die Jahresauswertung 365 kleine Dokumente statt rund 12 Mio. Datenpu
 | Erfassen im normalen Modus und im Studienmodus pixelgleich | `test/golden/erfassen_golden_test.dart` | `flutter test` |
 | Navigation, Studienmodus, Admin-Band, Studien-Dialog, Haushalt-Einstieg | `test/widget/navigation_test.dart` | `flutter test` |
 | Logik (Vorrat, Erinnerung, Vorschlag, Status-Schwellen, Download-Aufteilung, Texte) | `test/unit/` | `flutter test` |
+
+## Umsetzung Etappe 2: Tageswerte
+
+Die Tageswerte rechnet die `energiemonitor-api` (Endpunkt `POST /aggregate`, Code in `src/aggregation/`). Die App liest sie nur (`lib/daily/daily_values.dart`); die Diagramme folgen in Etappe 3.
+
+**Wann gerechnet wird:** Cloud Scheduler ruft stündlich `mode=hourly` (heute bis jetzt) und einmal nachts `mode=nightly` (die letzten drei Tage, für Nachlieferungen nach einem Funkunterbruch) auf. Vergangene Zeiträume rechnet das Team einmalig mit `tools/backfill_daily.py` im API-Repo nach.
+
+**Dokument** `/devices/{deviceId}/daily/{YYYY-MM-DD}`, Tag in Lokalzeit Europe/Zurich. Abweichungen vom Entwurf oben:
+
+| Feld | Inhalt |
+|---|---|
+| `energy_kwh`, `hourly_kwh` | Strom pro Messpunkt, aus der Leistung aufsummiert. Ein Wert gilt bis zum nächsten, höchstens 3 mal der übliche Abstand; längere Lücken zählen nicht und senken `availability`. `hourly_kwh` hat 24 Werte nach Uhrzeit (an der Zeitumstellung zählt die doppelte Stunde zusammen). |
+| `energy_sensor` | welcher Sensor gezählt wurde (Reihenfolge victron, shelly-3em-pro, pzem-017). Rückspeisung als negative Leistung an E1 erscheint als `E2`, wenn es keinen eigenen Messpunkt E2 gibt. |
+| `climate` | Viertelstundenmittel der Studienquelle Netatmo (sonst Sensirion, `climate_source`): Median, 5. und 95. Perzentil, Höchstwert innen, Feuchte, CO2, Tagesmittel aussen, `hours_over_28`, dazu `t_in_mean_08_20` für die heisseste Woche. |
+| `hourly_climate` | Median pro Stunde für Innentemperatur und CO2 (Heatmap). |
+| `occupied`, `occupancy_source`, `co2_peak`, `co2_rise` | bewohnt aus dem CO2, Rohwerte, kein Mittel, wie in der Auswertung Langzeittest. Sensirion SCD4x: Höchstwert über 600 ppm. Netatmo (Ersatz): Höchstwert mehr als 150 ppm über dem 10. Perzentil des Tages (`co2_rise`), weil ihr Nullpunkt wandert. `null` bei zu wenig Daten. |
+| `fire_events`, `fire_source` | erkannte Feuer mit Beginn, Ende, Anstieg und Gewicht (Brenndauer in Stunden). |
+| `manual_alloc` | pro Energieträger: `quantity` und `unit` (Einheit des Formulars: kg, Ster, Liter), `method` (`ofensignatur`, `heizgradtage`, `bewohnte_tage`, `gleichmaessig`), `provisional`, `incomplete` (ein Messpunkt noch nicht schätzbar), `fires`, `by_metering_point`. `quantity: null` heisst: noch nicht schätzbar (es fehlt ein abgeschlossener Zeitraum). |
+| `manual_kwh_estimated` | Menge mal Heizwert aus `/config/factors`; ohne Faktor fehlt der Wert. |
+| `partial`, `data_until` | heute noch nicht vorbei; Zeitpunkt des letzten Messwerts. |
+
+**Ofensignatur:** wie in `05_infotexte.md`, mit einer Schärfung: Die Sonne zählt ab 2 Stunden vor dem Anstieg (E3 nie über 300 W), weil der Victron mit voller Batterie die PV drosselt und E3 dann wenig zeigt, obwohl die Sonne scheint. Scheint nach dem Feuer die Sonne, endet dort die Brenndauer.
+
+**Verteilung der Brennstoffe:** Die Reihen sind wie im Formular nach Messpunkt und Energieträger getrennt. Abgeschlossene Zeiträume werden nach der ersten Methode mit Gewicht verteilt; laufende Zeiträume mit der Menge pro Gewicht aus dem letzten abgeschlossenen Zeitraum, als vorläufig. Kommt ein Formulareintrag dazu, rechnet der nächste stündliche Lauf alle Tage seit dem vorherigen Zeitraum neu. Der Stand dafür liegt in `/devices/{deviceId}/aggregation/state` (nur Backend).
+
+**Abgleich mit der Auswertung Langzeittest** (Beispielhaus, 1.4. bis 30.9.2026, aus den echten Rohdaten gerechnet, nichts geschrieben):
+
+| Wert | Auswertung Langzeittest | Tageswerte |
+|---|---|---|
+| PV (E3) | 555.1 kWh | 555.0 kWh |
+| Netzbezug (E1) | 0 kWh | 0 kWh |
+| Bodenheizung (I2) | 79.8 kWh | 79.9 kWh |
+| bewohnte Tage | 125 | 125 |
+| Feuer | 21., 22., 24.4., 12., 14. bis 17.5. | dieselben 8 Tage |
+
+Mit nur der Netatmo als CO2-Quelle ergibt die Anstiegsregel im selben Zeitraum 127 bewohnte Tage, an 167 von 183 Tagen gleich wie mit dem Sensirion. Ein fester Schwellwert für die Netatmo trifft höchstens 151 von 183 Tagen.
+
+Winter: Im November erkennt die Ofensignatur fast jeden Morgen um 06:00 ein Feuer. Das stimmt: Der Pelletofen im Beispielhaus startet morgens automatisch. Lange Feuer erreichen im Winter oft die Obergrenze von 12 Stunden (prüfen mit Daten bis Februar 2027).
+
+### Rules Etappe 2
+
+| Pfad | Lesen | Schreiben |
+|---|---|---|
+| `/devices/{id}/daily/{tag}` | mit `monitor_read` | niemand aus der App |
+| `/devices/{id}/aggregation/{doc}` | niemand | niemand aus der App |
+| `/config/factors` | angemeldet | niemand aus der App |
+
+`/config/factors` pflegt das Team in der Firebase Console: `{"heating_values": {"pellets": {"value": …, "unit": "kWh/kg", "source": "…"}}, "primary_energy_factors": {…}}`. Ohne Heizwert bleibt `manual_kwh_estimated` leer.
