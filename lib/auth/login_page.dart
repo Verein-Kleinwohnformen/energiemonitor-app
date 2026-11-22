@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/session_scope.dart';
+import '../shell/app_icon.dart';
 import '../theme/kwf_theme.dart';
 import '../theme/kwf_tokens.dart';
 import '../theme/kwf_widgets.dart';
@@ -104,7 +105,7 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Center(child: Image.asset('assets/logo.png', width: 88, height: 88)),
+                    const Center(child: KwfAppIcon(size: 88)),
                     const SizedBox(height: 12),
                     Center(child: Text('Energiemonitor', style: kwfText(26, weight: FontWeight.w600))),
                     const SizedBox(height: 24),

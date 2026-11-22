@@ -12,6 +12,7 @@ import 'app/services.dart';
 import 'app/session.dart';
 import 'firebase_options.dart';
 import 'platform/emulator_reset.dart';
+import 'platform/web_splash.dart';
 
 /// Lokal gegen den Firebase-Emulator laufen:
 ///   flutter run -d chrome --dart-define=USE_EMULATOR=true
@@ -50,6 +51,9 @@ Future<void> main() async {
   FirebaseAuth.instance.authStateChanges().skip(1).listen((_) => session.load());
   session.load();
 
+  // Der Startbildschirm aus web/index.html verschwindet, sobald Flutter die
+  // gleich aussehende SplashView gezeichnet hat.
+  WidgetsBinding.instance.addPostFrameCallback((_) => hideWebSplash());
   runApp(EnergiemonitorApp(
     session: session,
     services: (child) => AppServices(

@@ -1,118 +1,136 @@
-<!DOCTYPE html><html><head>
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
   <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
+    Base href: wird beim Build durch den Wert von `--base-href` ersetzt.
   -->
   <base href="$FLUTTER_BASE_HREF">
-
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Energiemonitor des Vereins Kleinwohnformen">
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
 
-  <!-- iOS meta tags & icons -->
+  <!-- iOS -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Energiemonitor">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
-  
-  <!-- Theme color for mobile browsers -->
-  <meta name="theme-color" content="#8ABB3D">
 
-  <!-- Favicon -->
+  <meta name="theme-color" content="#FFFFFF">
   <link rel="icon" type="image/png" href="favicon.png">
-
-  <title>Energiemonitor - KWF</title>
+  <title>Energiemonitor</title>
   <link rel="manifest" href="manifest.json">
-  <style id="splash-screen-style">
-    html {
-      height: 100%
+
+  <!--
+    Startbildschirm, bis Flutter den ersten Frame zeichnet (Design System,
+    Komponente SplashScreen): App-Icon mit Balken, Name, Ladebalken, unten
+    die gruene Dachkante mit dem Vereinslogo. Die Flutter-Ansicht
+    lib/shell/splash_view.dart sieht gleich aus, damit der Uebergang ruhig
+    ist. Bewusst ohne flutter_native_splash gepflegt.
+  -->
+  <style>
+    /* Inter aus den App-Assets (dieselbe Datei, die Flutter laedt; der
+       Browser-Cache teilt sie). Bis sie da ist, Arial. */
+    @font-face {
+      font-family: 'Inter';
+      src: url('assets/assets/fonts/Inter.ttf') format('truetype');
+      font-weight: 100 900;
+      font-display: swap;
+    }
+    html, body { height: 100%; margin: 0; }
+    body { background: #ffffff; }
+
+    #splash {
+      position: fixed; inset: 0; z-index: 10;
+      background: #ffffff; overflow: hidden;
+      font-family: Inter, Arial, Helvetica, sans-serif; color: #333333;
+      transition: opacity 240ms ease-out;
+    }
+    #splash.weg { opacity: 0; pointer-events: none; }
+
+    .splash-mitte {
+      position: absolute; left: 0; right: 0; top: 34%;
+      transform: translateY(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 18px;
+      text-align: center; padding: 0 28px;
+    }
+    .splash-icon { width: 112px; height: 112px; display: block; }
+    .splash-name { font-size: 26px; line-height: 32px; font-weight: 600; }
+    .splash-zeile { font-size: 14px; line-height: 20px; font-weight: 300; margin-top: 4px; }
+
+    /* Ladebalken 3px, gruen-dunkel auf grau-hell, kein Spinner */
+    .splash-laden { width: 120px; height: 3px; background: #ddddde; position: relative; overflow: hidden; margin-top: 8px; }
+    .splash-laden span {
+      position: absolute; top: 0; bottom: 0; width: 40%; left: -40%;
+      background: #4f7a19; animation: laden 1.4s ease-in-out infinite;
+    }
+    @keyframes laden { 0% { left: -40%; } 100% { left: 100%; } }
+
+    /* Balken im Icon: wachsen und sinken versetzt, wie ein Messwert */
+    .balken { transform-box: fill-box; transform-origin: 50% 100%; animation: balken 1.6s ease-in-out infinite; }
+    .balken.b1 { animation-delay: -0.9s; }
+    .balken.b2 { animation-delay: -0.45s; }
+    .balken.b3 { animation-delay: 0s; }
+    @keyframes balken {
+      0%, 100% { transform: scaleY(1); }
+      50% { transform: scaleY(0.45); }
     }
 
-    body {
-      margin: 0;
-      min-height: 100%;
-      background-color: #FFFFFF;
-          background-size: 100% 100%;
-    }
+    .splash-dach { position: absolute; left: 0; right: 0; bottom: 0; }
+    .splash-dach svg { display: block; width: 100%; height: 70px; margin-bottom: -1px; }
+    .splash-band { background: #8abb3d; height: 96px; display: flex; align-items: center; justify-content: center; }
+    .splash-band img { height: 44px; display: block; }
 
-    .center {
-      margin: 0;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      -ms-transform: translate(-50%, -50%);
-      transform: translate(-50%, -50%);
-    }
-
-    .contain {
-      display:block;
-      width:100%; height:100%;
-      object-fit: contain;
-    }
-
-    .stretch {
-      display:block;
-      width:100%; height:100%;
-    }
-
-    .cover {
-      display:block;
-      width:100%; height:100%;
-      object-fit: cover;
-    }
-
-    .bottom {
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      -ms-transform: translate(-50%, 0);
-      transform: translate(-50%, 0);
-    }
-
-    .bottomLeft {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-    }
-
-    .bottomRight {
-      position: absolute;
-      bottom: 0;
-      right: 0;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      body {
-        background-color: #1A1A1A;
-          }
+    @media (prefers-reduced-motion: reduce) {
+      .balken, .splash-laden span { animation: none; }
+      .splash-laden span { left: 0; width: 45%; }
     }
   </style>
-  <script id="splash-screen-script">
-    function removeSplashFromWeb() {
-      document.getElementById("splash")?.remove();
-      document.getElementById("splash-branding")?.remove();
-      document.body.style.background = "transparent";
+  <script>
+    // Von Flutter aufgerufen, sobald die erste Ansicht steht (main.dart).
+    function hideLoadingSplash() {
+      var s = document.getElementById('splash');
+      if (!s) return;
+      s.classList.add('weg');
+      setTimeout(function () { s.remove(); }, 300);
     }
   </script>
-  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
 </head>
 <body>
-  <picture id="splash">
-      <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
-      <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-      <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
-  </picture>
-  <script src="flutter_bootstrap.js" async=""></script>
-
-
-</body></html>
+  <div id="splash" role="status" aria-label="Energiemonitor wird geladen">
+    <div class="splash-mitte">
+      <svg class="splash-icon" viewBox="0 0 1024 1024" aria-hidden="true">
+        <defs>
+          <clipPath id="icon-form"><rect width="1024" height="1024" rx="229.1"/></clipPath>
+          <linearGradient id="icon-verlauf" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stop-color="#4f7a19"/><stop offset="1" stop-color="#8abb3d"/>
+          </linearGradient>
+        </defs>
+        <g clip-path="url(#icon-form)">
+          <rect width="1024" height="1024" fill="url(#icon-verlauf)"/>
+          <path d="M262 780V520L512 300 762 520V780Z" fill="#ffffff"/>
+          <path d="M196 506 512 228 828 506" fill="none" stroke="#c2d42e" stroke-width="56" stroke-linejoin="miter"/>
+          <path class="balken b1" d="M342 716 V624 Q342 606 360 606 H404 Q422 606 422 624 V716 Z" fill="#4f7a19"/>
+          <path class="balken b2" d="M472 716 V544 Q472 526 490 526 H534 Q552 526 552 544 V716 Z" fill="#4f7a19"/>
+          <path class="balken b3" d="M602 716 V464 Q602 446 620 446 H664 Q682 446 682 464 V716 Z" fill="#4f7a19"/>
+        </g>
+      </svg>
+      <div>
+        <div class="splash-name">Energiemonitor</div>
+        <div class="splash-zeile">Energie und Raumklima<br>deiner Kleinwohnform</div>
+      </div>
+      <div class="splash-laden"><span></span></div>
+    </div>
+    <div class="splash-dach">
+      <svg viewBox="0 0 300 70" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 70 L0 36 L75 0 L300 50 L300 70 Z" fill="#8abb3d"/>
+      </svg>
+      <div class="splash-band">
+        <img src="splash/kwf-logo-negativ.png" alt="Verein Kleinwohnformen">
+      </div>
+    </div>
+  </div>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
