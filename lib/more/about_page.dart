@@ -19,6 +19,10 @@ Future<void> openLink(String url) async {
 }
 
 /// Impressum und Version (vorher eigener Tab "Info").
+///
+/// TODO(prüfen): Das alte Impressum nannte den Entwickler mit Namen und
+/// LinkedIn-Profil. Hier steht neu das Team Energiemonitor. Klaeren, ob der
+/// Name im Impressum stehen soll.
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
 
