@@ -109,7 +109,9 @@ class SystemStatus {
     if (o == null) return 'Noch keine Daten';
     switch (o) {
       case LinkState.online:
-        return 'Alles läuft · ${formatTime(latest!, now)}';
+        // Online heisst juenger als 90 min: die Uhrzeit genuegt, auch kurz
+        // nach Mitternacht (kurz, damit der Hausname Platz hat).
+        return 'Alles läuft · ${DateFormat('HH:mm').format(latest!)}';
       case LinkState.delayed:
         final n = count(LinkState.delayed);
         return n == 1 ? '1 Messpunkt verzögert' : '$n Messpunkte verzögert';

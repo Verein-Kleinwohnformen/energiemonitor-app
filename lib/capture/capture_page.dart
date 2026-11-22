@@ -192,24 +192,37 @@ class StockCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final kind = stock.kind;
     return KwfCard(
-      padding: const EdgeInsets.fromLTRB(14, 6, 2, 14),
+      padding: const EdgeInsets.fromLTRB(14, 14, 2, 14),
       onTap: onTap == null ? null : () => onTap!(stock),
       semanticLabel: '${kind.label}, ${formatQuantity(stock.amount)} ${stock.unit}. Nachfüllen',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  color: kind.color,
+                  child: Icon(kind.icon, size: 18, color: KwfColors.weiss),
+                ),
+                const SizedBox(width: 8),
+                Expanded(child: Text(kind.label, style: KwfText.cardTitle)),
+              ],
+            ),
+          ),
+          // Zahl mit Info-Symbol daneben: der Name oben hat so die ganze Breite.
           Row(
             children: [
-              Container(
-                width: 28,
-                height: 28,
-                color: kind.color,
-                child: Icon(kind.icon, size: 18, color: KwfColors.weiss),
-              ),
-              const SizedBox(width: 8),
               Expanded(
-                child: Text(kind.label,
-                    overflow: TextOverflow.ellipsis, style: KwfText.cardTitle),
+                child: Text.rich(TextSpan(children: [
+                  TextSpan(text: formatQuantity(stock.amount), style: KwfText.number),
+                  TextSpan(
+                      text: ' ${stock.unit}',
+                      style: kwfText(13, weight: FontWeight.w400, color: KwfColors.textSekundaer)),
+                ])),
               ),
               InfoButton(
                 text: InfoTexts.stock,
@@ -222,14 +235,6 @@ class StockCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text.rich(TextSpan(children: [
-                  TextSpan(text: formatQuantity(stock.amount), style: KwfText.number),
-                  TextSpan(
-                      text: ' ${stock.unit}',
-                      style: kwfText(13,
-                          weight: FontWeight.w400, color: KwfColors.textSekundaer)),
-                ])),
-                const SizedBox(height: 6),
                 Text(
                     'beim letzten Eintrag\n${meteringText(stock.meteringPoint)} · '
                     '${_date.format(stock.date)}',

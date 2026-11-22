@@ -10,11 +10,13 @@ import 'app/firestore_services.dart';
 import 'app/services.dart';
 import 'app/session.dart';
 import 'firebase_options.dart';
+import 'platform/emulator_reset.dart';
 
 /// Lokal gegen den Firebase-Emulator laufen:
 ///   flutter run -d chrome --dart-define=USE_EMULATOR=true
 /// Dann verbindet sich die App mit dem Demo-Projekt und nie mit der
 /// produktiven Datenbank. Testdaten: node tool/seed_emulator.mjs
+/// Lokal meldet man sich nach jedem Neuladen neu an (siehe emulator_reset).
 const kUseEmulator = bool.fromEnvironment('USE_EMULATOR');
 
 Future<void> main() async {
@@ -24,6 +26,7 @@ Future<void> main() async {
   await initializeDateFormatting('de');
 
   if (kUseEmulator) {
+    await forgetStoredLogin();
     await Firebase.initializeApp(
       options: const FirebaseOptions(
         apiKey: 'demo-api-key',

@@ -3,6 +3,7 @@
 // Alles hier stammt nur aus den eigenen Eintraegen und zeigt keinen
 // gemessenen Verbrauch. Darum ist es auch im Studienmodus sichtbar.
 import '../app/services.dart';
+import '../util/dates.dart';
 import '../energy.dart';
 import 'energy_kinds.dart';
 
@@ -76,13 +77,12 @@ class Reminder {
 /// Abstand zwischen zwei Eintraegen, mindestens aber 60 Tage. Hoechstens zwei,
 /// die aeltesten zuerst.
 List<Reminder> remindersFor(List<Stock> stocks, DateTime now) {
-  final today = DateTime(now.year, now.month, now.day);
-  final out = <Reminder>[];
+    final out = <Reminder>[];
   for (final s in stocks) {
-    final since = today.difference(_day(s.date)).inDays;
+    final since = daysBetween(s.date, now);
     var limit = kReminderMinDays;
     if (s.previous != null) {
-      final gap = _day(s.date).difference(_day(s.previous!.energy.purchaseDate)).inDays;
+      final gap = daysBetween(s.previous!.energy.purchaseDate, s.date);
       if (gap > limit) limit = gap;
     }
     if (since > limit) out.add(Reminder(s, since));
@@ -91,7 +91,6 @@ List<Reminder> remindersFor(List<Stock> stocks, DateTime now) {
   return out.take(2).toList();
 }
 
-DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
 
 // ---------------------------------------------------------------------------
 // Vorschlag "aufgebraucht etwa"
@@ -103,8 +102,7 @@ DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
 double? dailyUsage(Stock? stock) {
   if (stock == null || stock.previous == null) return null;
   final consumed = stock.latest.storedConsumed;
-  final days =
-      _day(stock.date).difference(_day(stock.previous!.energy.purchaseDate)).inDays;
+  final days = daysBetween(stock.previous!.energy.purchaseDate, stock.date);
   if (consumed == null || consumed <= 0 || days <= 0) return null;
   return consumed / days;
 }
@@ -120,7 +118,8 @@ DateTime? suggestUsageDate({
   final stock = added + leftover;
   if (stock <= 0) return null;
   final days = (stock / perDay).round();
-  final d = _day(purchase).add(Duration(days: days));
+  // Kalendertage addieren, nicht 24-h-Schritte (Zeitumstellung).
+  final d = DateTime(purchase.year, purchase.month, purchase.day + days);
   if (d.year > 2100) return null;
   return d;
 }

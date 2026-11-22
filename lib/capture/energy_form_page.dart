@@ -170,7 +170,13 @@ class _EnergyFormPageState extends State<EnergyFormPage> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      // Fehler koennen ausserhalb des sichtbaren Bereichs liegen.
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Bitte prüfe die rot markierten Felder.')));
+      return;
+    }
     final session = SessionScope.read(context);
     final values = FormValues(
       kind: _kind!,

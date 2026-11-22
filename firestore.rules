@@ -59,8 +59,47 @@ service cloud.firestore {
     
     match /monitors/{monitorId} {
       // Nur eingeloggte User können Monitore sehen
-      // Keine Schreibrechte (werden manuell in Firebase Console verwaltet)
+      // Keine Schreibrechte (werden manuell in Firebase Console verwaltet).
+      // Dazu gehoeren study_mode und study_note: Bewohnende koennen den
+      // Studienmodus nicht abschalten.
       allow read: if request.auth != null;
+      allow write: if false;
+
+      // Haushalt (Personen, Wohnflaeche, Label-Wert) mit Verlauf.
+      // Anlegen mit Bearbeitungsrecht, nie aendern oder loeschen: eine
+      // Aenderung ist ein neuer Eintrag mit "gueltig ab", damit fuer die
+      // Studie nachvollziehbar bleibt, wann sich der Haushalt geaendert hat.
+      match /household/{entryId} {
+        allow read: if canReadDevice(monitorId);
+        allow create: if canEditDevice(monitorId) && validHousehold(request.resource.data);
+        allow update, delete: if false;
+      }
+    }
+
+    function validHousehold(d) {
+      return d.keys().hasOnly(['valid_from', 'persons', 'living_area_m2',
+                               'label_w_per_person', 'updated_by', 'updated_at'])
+        && d.keys().hasAll(['valid_from', 'persons', 'updated_by', 'updated_at'])
+        && d.valid_from is string
+        && d.valid_from.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && d.persons is int && d.persons >= 1 && d.persons <= 20
+        && (!('living_area_m2' in d) || (d.living_area_m2 is number
+              && d.living_area_m2 > 0 && d.living_area_m2 <= 1000))
+        && (!('label_w_per_person' in d) || (d.label_w_per_person is number
+              && d.label_w_per_person > 0 && d.label_w_per_person <= 10000))
+        && d.updated_by == request.auth.uid
+        && d.updated_at == request.time;
+    }
+
+    // ========================================
+    // Rollen (Team Energiemonitor)
+    // ========================================
+
+    match /roles/{userId} {
+      // Jede Person sieht nur ihre eigene Rolle (z.B. admin: true).
+      // Schreiben nur in der Firebase Console oder per Admin SDK, nie aus
+      // der App. So kann sich niemand selbst zum Admin machen.
+      allow read: if request.auth != null && request.auth.uid == userId;
       allow write: if false;
     }
 

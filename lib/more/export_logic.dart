@@ -1,5 +1,6 @@
 // Zeitraeume fuer den Download. Die API liefert hoechstens 31 Tage pro
 // Anfrage (GET /export). Laengere Zeitraeume teilt die App in Monatsstuecke.
+import '../util/dates.dart';
 
 /// Basis-URL der API. Wer selbst hostet (Variante B), aendert sie hier.
 const kApiBaseUrl = 'https://energiemonitor-api-325255315766.europe-west6.run.app';
@@ -16,7 +17,7 @@ class DayRange {
   final DateTime start;
   final DateTime end;
 
-  int get days => end.difference(start).inDays + 1;
+  int get days => daysBetween(start, end) + 1;
 
   @override
   bool operator ==(Object other) =>
@@ -31,8 +32,8 @@ class DayRange {
 
 /// Letzter abgeschlossener Kalendermonat.
 DayRange lastMonth(DateTime now) {
-  final firstThis = DateTime(now.year, now.month, 1);
-  final lastPrev = firstThis.subtract(const Duration(days: 1));
+  // Tag 0 = letzter Tag des Vormonats, ohne 24-h-Rechnung (Zeitumstellung).
+  final lastPrev = DateTime(now.year, now.month, 0);
   return DayRange(DateTime(lastPrev.year, lastPrev.month, 1), lastPrev);
 }
 

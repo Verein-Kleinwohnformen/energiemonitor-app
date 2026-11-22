@@ -18,8 +18,10 @@ class MonitorSwitchPage extends StatelessWidget {
         for (final m in session.monitors)
           InkWell(
             onTap: () {
-              session.selectMonitor(m.id);
-              Navigator.of(context).maybePop();
+              // Erst schliessen, dann wechseln: der Wechsel baut die
+              // Navigation neu auf (Tabs haengen vom Studienmodus ab).
+              Navigator.of(context).pop();
+              WidgetsBinding.instance.addPostFrameCallback((_) => session.selectMonitor(m.id));
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

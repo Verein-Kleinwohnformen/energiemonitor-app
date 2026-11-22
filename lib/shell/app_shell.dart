@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../app/routes.dart';
 import '../app/services.dart';
+import '../app/version.dart';
 import '../app/session.dart';
 import '../app/session_scope.dart';
 import '../household/household.dart';
@@ -113,6 +114,7 @@ class _AppShellState extends State<AppShell> {
         bottom: false,
         child: Column(
           children: [
+            if (kAppChannel.isNotEmpty) const _ChannelBand(),
             const AppHeader(),
             if (session.showAdminBand) const _AdminBand(),
             Expanded(child: widget.shell),
@@ -124,6 +126,22 @@ class _AppShellState extends State<AppShell> {
         currentBranch: current,
         onSelect: (t) => widget.shell.goBranch(t.branch, initialLocation: t.branch == current),
       ),
+    );
+  }
+}
+
+/// Hinweis in Testversionen (Build mit --dart-define=APP_CHANNEL=...).
+class _ChannelBand extends StatelessWidget {
+  const _ChannelBand();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: KwfColors.blau,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Text('Testversion $kAppChannel, Einträge landen in den echten Daten',
+          style: kwfText(12, weight: FontWeight.w600, color: KwfColors.weiss)),
     );
   }
 }
@@ -203,7 +221,9 @@ class _TabItem extends StatelessWidget {
                 ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(0, 10, 0, 14),
+                // heightFactor 1: die Leiste ist nur so hoch wie ihr Inhalt.
                 child: Center(
+                  heightFactor: 1,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
