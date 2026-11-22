@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 /// Model für einen Messpunkt
 class MeteringPoint {
@@ -8,6 +9,7 @@ class MeteringPoint {
   final int lastSeen;
   final List<String> sensorTypes;
   final List<String> valueFields;
+  final DataQuality? dataQuality;
 
   MeteringPoint({
     required this.deviceId,
@@ -16,6 +18,7 @@ class MeteringPoint {
     required this.lastSeen,
     required this.sensorTypes,
     required this.valueFields,
+    this.dataQuality,
   });
 
   factory MeteringPoint.fromFirestore(
@@ -33,7 +36,18 @@ class MeteringPoint {
               ?.map((e) => e.toString())
               .toList() ??
           [],
+      dataQuality: DataQuality.fromFirestore(data['data_quality']),
     );
+  }
+
+  /// Datenqualitaet ist nicht ok und die Meldung ist aktuell (< 24 h).
+  bool get hasQualityWarning => hasQualityWarningAt(DateTime.now());
+
+  bool hasQualityWarningAt(DateTime now) {
+    final q = dataQuality;
+    if (q == null || q.isOk) return false;
+    const oneDayInMs = 24 * 60 * 60 * 1000;
+    return now.millisecondsSinceEpoch - q.updatedAt < oneDayInMs;
   }
 
   /// Gibt die Kategorie basierend auf dem Messpunkt-Prefix zurück
@@ -92,6 +106,58 @@ class MeteringPoint {
   /// Zeigt ob für diesen Messpunkt ein Online/Offline-Status relevant ist
   bool get hasOnlineStatus {
     return !meteringPointId.startsWith('M');
+  }
+}
+
+/// Datenqualitaet eines Messpunkts (Feld `data_quality`, geschrieben von der
+/// API, z.B. fuer den Wassertank D1 mit dem Apollon-Sensor).
+///
+/// status: ok | degraded | no_valid_data
+class DataQuality {
+  final String status;
+  final int? tofStatus;
+  final double? okRatio;
+  final int since;
+  final int updatedAt;
+
+  DataQuality({
+    required this.status,
+    this.tofStatus,
+    this.okRatio,
+    required this.since,
+    required this.updatedAt,
+  });
+
+  static DataQuality? fromFirestore(dynamic data) {
+    if (data is! Map) return null;
+    final status = data['status'];
+    if (status is! String || status.isEmpty) return null;
+    return DataQuality(
+      status: status,
+      tofStatus: (data['tof_status'] as num?)?.toInt(),
+      okRatio: (data['ok_ratio'] as num?)?.toDouble(),
+      since: (data['since'] as num?)?.toInt() ?? 0,
+      updatedAt: (data['updated_at'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  bool get isOk => status == 'ok';
+
+  /// Kurze Erklaerung fuer den Systemstatus.
+  String describe() {
+    final sinceText = since > 0
+        ? DateFormat('dd.MM.yyyy HH:mm').format(DateTime.fromMillisecondsSinceEpoch(since))
+        : 'unbekannt';
+    switch (status) {
+      case 'degraded':
+        final pct = okRatio != null ? '${(okRatio! * 100).round()} % ' : '';
+        return 'Schwaches Messsignal: ${pct}einwandfreie Messungen in den '
+            'letzten 6 Std. (seit $sinceText)';
+      case 'no_valid_data':
+        return 'Keine gültige Messung seit $sinceText';
+      default:
+        return 'Datenqualität: $status (seit $sinceText)';
+    }
   }
 }
 

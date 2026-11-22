@@ -211,28 +211,52 @@ class _PointRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = point.state!;
+    final quality = point.quality;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 6,
-              children: [
-                Text(point.label, style: kwfText(14, weight: FontWeight.w500)),
-                KwfCodeChip(point.id),
-              ],
+          Row(
+            children: [
+              Expanded(
+                child: Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  children: [
+                    Text(point.label, style: kwfText(14, weight: FontWeight.w500)),
+                    KwfCodeChip(point.id),
+                  ],
+                ),
+              ),
+              Text(formatTime(point.lastSeen, now), style: KwfText.meta),
+              const SizedBox(width: 10),
+              KwfStatusDot(stateColor(state)),
+              const SizedBox(width: 6),
+              SizedBox(
+                width: 64,
+                child: Text(linkStateWord(state), style: kwfText(12, weight: FontWeight.w500)),
+              ),
+            ],
+          ),
+          // Warnung zur Datenqualitaet (z.B. Wassertank D1), nur wenn aktuell.
+          if (quality != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 1),
+                    child: Icon(Icons.warning_amber_rounded, size: 16, color: KwfColors.komfortMittel),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text('Datenqualität: ${quality.describe()}', style: KwfText.meta),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Text(formatTime(point.lastSeen, now), style: KwfText.meta),
-          const SizedBox(width: 10),
-          KwfStatusDot(stateColor(state)),
-          const SizedBox(width: 6),
-          SizedBox(
-            width: 64,
-            child: Text(linkStateWord(state), style: kwfText(12, weight: FontWeight.w500)),
-          ),
         ],
       ),
     );

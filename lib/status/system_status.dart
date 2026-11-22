@@ -55,9 +55,12 @@ const kPointLabels = <String, String>{
 String pointLabel(String id) => kPointLabels[id] ?? 'Messpunkt $id';
 
 class PointStatus {
-  const PointStatus({required this.id, required this.lastSeen, required this.state});
+  const PointStatus({required this.id, required this.lastSeen, required this.state, this.quality});
   final String id;
   final DateTime lastSeen;
+
+  /// Aktuelle Warnung zur Datenqualitaet (z.B. Wassertank D1), sonst null.
+  final DataQuality? quality;
 
   /// null bei manuellen Messpunkten (M0 bis M2): die haben keine Ampel.
   final LinkState? state;
@@ -78,7 +81,11 @@ class SystemStatus {
         manual.add(PointStatus(id: p.meteringPointId, lastSeen: lastSeen, state: null));
       } else if (now.difference(lastSeen) < kActiveWindow) {
         automatic.add(PointStatus(
-            id: p.meteringPointId, lastSeen: lastSeen, state: linkStateFor(lastSeen, now)));
+          id: p.meteringPointId,
+          lastSeen: lastSeen,
+          state: linkStateFor(lastSeen, now),
+          quality: p.hasQualityWarningAt(now) ? p.dataQuality : null,
+        ));
       }
     }
     return SystemStatus._(automatic, manual, now);
@@ -102,6 +109,9 @@ class SystemStatus {
       : automatic.map((p) => p.lastSeen).reduce((a, b) => a.isAfter(b) ? a : b);
 
   int count(LinkState s) => automatic.where((p) => p.state == s).length;
+
+  /// Messpunkte mit aktueller Warnung zur Datenqualitaet.
+  List<PointStatus> get qualityWarnings => automatic.where((p) => p.quality != null).toList();
 
   /// Kurztext fuer die Pille in der Kopfzeile.
   String get pillText {
