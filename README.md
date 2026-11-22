@@ -18,6 +18,7 @@ Wenn du für die Energiestudie einen Monitor baust, nutzt du diese App unter der
 - Messwerte der Sensoren als Diagramm
 - Daten-Download als XLSX über die [API](https://github.com/Verein-Kleinwohnformen/energiemonitor-api), längere Zeiträume in Monatsdateien
 - Info-Overlay bei jeder Zahl: Quelle, Rechnung, Sicherheit
+- Verwaltung der Zugänge für Superadmins: Konten den Häusern zuordnen (lesen oder bearbeiten), mit Protokoll
 
 **Noch nicht umgesetzt:** Energiebilanz und Verbrauchsstatistik (Übersicht und Auswertung folgen mit den Tageswerten), Spartipps, Plausibilitätschecks mit Warnungen.
 
@@ -31,7 +32,7 @@ node tool/run_integration.mjs    # Formular-Regressionstest und Rules-Tests im F
 Lokal mit Beispieldaten, ohne echte Datenbank:
 
 ```
-firebase emulators:start --only firestore,auth --project demo-energiemonitor
+firebase emulators:start --only "firestore,auth" --project demo-energiemonitor
 node tool/seed_emulator.mjs
 flutter run -d chrome --dart-define=USE_EMULATOR=true
 ```
@@ -50,7 +51,7 @@ Technik: Flutter (Dart `^3.5.3`), Firebase Auth, Firestore, Firebase Hosting. Di
 ### Sicherheit
 
 - Die Firebase-Web-Konfiguration in `lib/firebase_options.dart` ist **kein Geheimnis**, sondern wird mit jeder Web-App ausgeliefert. Der Schutz liegt in den [Firestore-Rules](firestore.rules) und in den Einschränkungen des API-Schlüssels (HTTP-Referrer und benötigte APIs) in der Google Cloud Console. Setze beides für dein eigenes Projekt.
-- Die Rules erlauben Usern **nicht**, ihre eigenen Zugriffe (`monitor_read`, `monitor_edit`, `monitor_api_keys`) zu ändern. Neue Monitore und Rechte vergibst du in der Firebase Console oder per Admin SDK. Teste Änderungen an den Rules im [Firestore-Emulator](https://firebase.google.com/docs/emulator-suite).
+- Die Rules erlauben Usern **nicht**, ihre eigenen Zugriffe (`monitor_read`, `monitor_edit`, `monitor_api_keys`) zu ändern. Zugriffe vergibt ein Superadmin in der App (Custom Claim `superadmin`, gesetzt mit `tool/admin/set_superadmin.mjs`), jede Änderung wird protokolliert. Neue Monitore legst du in der Firebase Console an. Teste Änderungen an den Rules im [Firestore-Emulator](https://firebase.google.com/docs/emulator-suite).
 - Device-Keys der API gehören nie ins Repo.
 
 ### Cloud Functions

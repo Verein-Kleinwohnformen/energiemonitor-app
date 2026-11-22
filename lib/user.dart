@@ -155,6 +155,8 @@ class AppUser {
           .doc(userId) // Set the document ID to userId
           .set({
         'user_id': userId,
+        // Fuer die Verwaltung der Zugriffe (Rules: gleich wie im Login-Token).
+        'email': firebaseUser?.email,
         'monitor_read': ['sandbox_monitor'],
         'monitor_edit': ['sandbox_monitor'],
         'monitor_api_keys': {},

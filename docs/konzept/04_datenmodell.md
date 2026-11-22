@@ -96,17 +96,32 @@ Damit liest die Jahresauswertung 365 kleine Dokumente statt rund 12 Mio. Datenpu
 
 ## Umsetzung Etappe 1: Abweichungen und Ergänzungen
 
-- **Rolle Admin:** nicht als Feld `role` im User-Dokument, sondern in `/roles/{uid}` mit `admin: true`. Lesen darf nur die Person selbst, schreiben niemand aus der App (nur Firebase Console oder Admin SDK). So kann sich niemand selbst Rechte geben. Ein Superadmin mit Verwaltungs-Oberfläche folgt in Etappe 1b.
+- **Keine Admin-Rolle.** Das Feld `role: "admin"` aus dem Konzept gibt es nicht. Niemand sieht alle Häuser; Zugriff auf ein Haus gibt es nur über `monitor_read` und `monitor_edit`. Der Studienmodus gilt für alle, auch für das Team.
 - **Haushalt:** Dokument-ID `YYYY-MM-DD_<Erfassungszeitpunkt>`, damit auch eine Korrektur am selben Tag ein neuer Eintrag ist und nichts überschrieben wird. Gültig ist der jüngste Eintrag mit `valid_from` bis zum gefragten Tag. Die Rules prüfen Felder und Wertebereiche (1 bis 20 Personen, Fläche bis 1000 m², `updated_by` = angemeldete Person, `updated_at` = Serverzeit).
 - **Studien-Dialog:** gesehen pro Person und Monitor in `/users/{uid}.study_dialog_seen` (Liste der Monitor-IDs).
 - **Formular:** Mengen dürfen ein Komma haben ("11,5" = "11.5"), negative Mengen werden abgelehnt. Sonst fachlich unverändert, gespeichert über `Energy.addToFirebase()`.
+
+## Etappe 1b: Superadmin und Zugriffsverwaltung
+
+- **Superadmin** ist ein Custom Claim `superadmin: true` im Login-Token von Firebase Auth. Er wird nur mit `tool/admin/set_superadmin.mjs` gesetzt (Identity Toolkit API mit dem gcloud-Login des Teams), nie aus der App. Die Rules prüfen `request.auth.token.superadmin == true`. Nach dem Setzen muss sich die Person einmal neu anmelden.
+- Ein Superadmin **verwaltet Zugriffe, sieht aber keine Messdaten** von Häusern, die ihm nicht zugeordnet sind.
+- **Verwaltung** in der App unter "Mehr > Zugänge verwalten": alle Konten mit E-Mail, pro Haus "Kein Zugriff", "Lesen" oder "Bearbeiten", Übersicht pro Haus, Protokoll.
+- **E-Mail im User-Dokument** (`/users/{uid}.email`): beim Registrieren und bei jeder Anmeldung aus dem Login-Token nachgeführt; die Rules lassen nur die E-Mail aus dem Token zu. Bestehende Konten einmalig mit `tool/admin/backfill_emails.mjs`.
+- **Protokoll** `/admin_log/{id}` mit Verfasser, Konto, vorher und nachher. Die Rules verlangen, dass jede Änderung von `monitor_read`/`monitor_edit` durch den Superadmin im selben Batch einen Protokolleintrag schreibt, der genau diese Änderung beschreibt (`access_log_id`). Einträge kann niemand ändern oder löschen.
+
+| Pfad | Lesen | Schreiben |
+|---|---|---|
+| `/users/{uid}` | eigene Person; Superadmin alle | eigene Person nur `user_name`, `nickname_changed`, `study_dialog_seen`, `email` (= Token); Superadmin nur `monitor_read`, `monitor_edit` mit Protokoll; Bearbeiten nur zusammen mit Lesen |
+| `/monitors/{id}` | mit Zugriff auf das Haus; Liste nur Superadmin | niemand aus der App |
+| `/admin_log/{id}` | Superadmin | Superadmin anlegen (als er selbst, Serverzeit), nie ändern |
 
 ## Tests in der Umsetzung
 
 | Test | Wo | Läuft mit |
 |---|---|---|
 | Formular-Regressionstest: altes und neues Formular ergeben denselben Firestore-Zustand | `integration_test/form_regression_test.dart` | `node tool/run_integration.mjs` (Chrome und Firebase-Emulator) |
-| Firestore-Rules mit allen Ablehnungsfällen | `integration_test/rules_test.dart` | wie oben |
-| Erfassen im normalen Modus, im Studienmodus und als Admin pixelgleich | `test/golden/erfassen_golden_test.dart` | `flutter test` |
+| Firestore-Rules mit allen Ablehnungsfällen, inklusive Superadmin und Protokoll | `integration_test/rules_test.dart` | wie oben |
+| Verwaltung der Zugänge | `test/widget/admin_test.dart` | `flutter test` |
+| Erfassen im normalen Modus und im Studienmodus pixelgleich | `test/golden/erfassen_golden_test.dart` | `flutter test` |
 | Navigation, Studienmodus, Admin-Band, Studien-Dialog, Haushalt-Einstieg | `test/widget/navigation_test.dart` | `flutter test` |
 | Logik (Vorrat, Erinnerung, Vorschlag, Status-Schwellen, Download-Aufteilung, Texte) | `test/unit/` | `flutter test` |

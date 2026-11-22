@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
+import '../admin/admin_page.dart';
 import '../analysis/analysis_page.dart';
 import '../auth/login_page.dart';
 import '../capture/capture_page.dart';
@@ -85,6 +86,10 @@ GoRouter buildRouter(AppSession session) {
           parentNavigatorKey: _rootKey,
           builder: (_, __) => const AboutPage()),
       GoRoute(
+          path: Routes.admin,
+          parentNavigatorKey: _rootKey,
+          builder: (_, __) => const AdminPage()),
+      GoRoute(
           path: Routes.method,
           parentNavigatorKey: _rootKey,
           builder: (_, __) => const MethodPage()),
@@ -106,6 +111,7 @@ String? redirectFor(AppSession session, String location) {
     case SessionPhase.ready:
       if (location == Routes.login) return homeFor(session);
       if (session.hideAnalysis && Routes.isHiddenInStudy(location)) return Routes.capture;
+      if (location.startsWith(Routes.admin) && !session.isSuperadmin) return Routes.more;
       return null;
   }
 }

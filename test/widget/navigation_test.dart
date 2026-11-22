@@ -71,10 +71,15 @@ void main() {
       expect(homeFor(s), Routes.capture);
     });
 
-    test('Admin wird im Studienmodus nicht umgeleitet', () {
-      final s = AppSession.fixed(sessionData(study: true, admin: true));
-      expect(redirectFor(s, Routes.analysis), isNull);
-      expect(homeFor(s), Routes.overview);
+    test('es gibt keine Rolle, die den Studienmodus aufhebt, auch Superadmin nicht', () {
+      final s = AppSession.fixed(sessionData(study: true, superadmin: true));
+      expect(redirectFor(s, Routes.analysis), Routes.capture);
+      expect(homeFor(s), Routes.capture);
+    });
+
+    test('Verwaltung nur fuer Superadmin', () {
+      expect(redirectFor(AppSession.fixed(sessionData()), Routes.admin), Routes.more);
+      expect(redirectFor(AppSession.fixed(sessionData(superadmin: true)), Routes.admin), isNull);
     });
 
     test('normaler Modus startet in der Uebersicht', () {
@@ -108,10 +113,20 @@ void main() {
     expect(find.text('Messwerte'), findsNothing);
   });
 
-  testWidgets('Admin sieht Studienmonitor vollstaendig mit gelbem Band', (tester) async {
-    await pumpApp(tester, AppSession.fixed(sessionData(study: true, admin: true)));
-    expect(tabLabels(tester), ['Übersicht', 'Auswertung', 'Erfassen', 'Mehr']);
-    expect(find.text('Studienmodus aktiv, Bewohnende sehen nur Erfassen'), findsOneWidget);
+  testWidgets('Superadmin sieht in Mehr die Verwaltung, andere nicht', (tester) async {
+    await pumpApp(tester, AppSession.fixed(sessionData(superadmin: true)));
+    await tester.tap(find.text('Mehr').last);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Zugänge verwalten'), 200,
+        scrollable: find.byType(Scrollable).last);
+    expect(find.text('Zugänge verwalten'), findsOneWidget);
+
+    await pumpApp(tester, AppSession.fixed(sessionData()));
+    await tester.tap(find.text('Mehr').last);
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -2000));
+    await tester.pumpAndSettle();
+    expect(find.text('Zugänge verwalten'), findsNothing);
   });
 
   testWidgets('Studien-Dialog erscheint einmal', (tester) async {

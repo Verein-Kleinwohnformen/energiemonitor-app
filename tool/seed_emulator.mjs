@@ -16,7 +16,8 @@ const PASSWORD = 'emulator-123456';
 export const ACCOUNTS = {
   bewohner: 'bewohner@example.test', // normales Haus und Studienhaus, darf bearbeiten
   leser: 'leser@example.test', // nur lesen, normales Haus
-  admin: 'admin@example.test', // Team, sieht Studienhaus vollstaendig
+  superadmin: 'superadmin@example.test', // verwaltet Zugriffe (Custom Claim), ohne eigene Haeuser
+  neu: 'neu@example.test', // frisch registriert, nur Sandbox
 };
 
 const owner = { Authorization: 'Bearer owner', 'Content-Type': 'application/json' };
@@ -49,6 +50,17 @@ async function signUp(email) {
   const body = await res.json();
   if (!res.ok) throw new Error(`${email}: ${JSON.stringify(body)}`);
   return body.localId;
+}
+
+/// Custom Claims setzen, wie es tool/admin/set_superadmin.mjs in der echten
+/// Umgebung tut (hier mit dem Owner-Zugang des Emulators).
+async function setClaims(uid, claims) {
+  const res = await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/projects/${PROJECT}/accounts:update`, {
+    method: 'POST',
+    headers: owner,
+    body: JSON.stringify({ localId: uid, customAttributes: JSON.stringify(claims) }),
+  });
+  if (!res.ok) throw new Error(`Claims ${uid}: ${res.status} ${await res.text()}`);
 }
 
 async function reset() {
@@ -124,7 +136,9 @@ async function main() {
 
   const bewohner = await signUp(ACCOUNTS.bewohner);
   const leser = await signUp(ACCOUNTS.leser);
-  const admin = await signUp(ACCOUNTS.admin);
+  const superadmin = await signUp(ACCOUNTS.superadmin);
+  const neu = await signUp(ACCOUNTS.neu);
+  await setClaims(superadmin, { superadmin: true });
 
   // Beispieldaten, keine echten Haeuser.
   await setDoc('monitors/demo-haus', { monitor_id: 'demo-haus', tinyhouse_name: 'Beispielhaus', tinyhouse_location: 'Beispielort' });
@@ -136,11 +150,17 @@ async function main() {
     study_note: 'Messjahr bis Oktober 2028 (Beispiel)',
   });
 
-  const user = (uid, read, edit) => ({ user_id: uid, monitor_read: read, monitor_edit: edit, monitor_api_keys: {} });
-  await setDoc(`users/${bewohner}`, user(bewohner, ['demo-haus', 'demo-studie'], ['demo-haus', 'demo-studie']));
-  await setDoc(`users/${leser}`, user(leser, ['demo-haus'], []));
-  await setDoc(`users/${admin}`, user(admin, ['demo-studie', 'demo-haus'], ['demo-studie', 'demo-haus']));
-  await setDoc(`roles/${admin}`, { admin: true });
+  await setDoc('monitors/sandbox_monitor', { monitor_id: 'sandbox_monitor', tinyhouse_name: 'Testmonitor', tinyhouse_location: 'Sandbox' });
+  await setDoc('monitors/demo-jura', { monitor_id: 'demo-jura', tinyhouse_name: 'Haus ohne Klimasensor', tinyhouse_location: 'Beispielberg' });
+
+  const user = (uid, email, read, edit) => ({
+    user_id: uid, ...(email ? { email } : {}), monitor_read: read, monitor_edit: edit, monitor_api_keys: {}, date_created: new Date(),
+  });
+  await setDoc(`users/${bewohner}`, user(bewohner, ACCOUNTS.bewohner, ['demo-haus', 'demo-studie'], ['demo-haus', 'demo-studie']));
+  // Altes Konto: ohne E-Mail im User-Dokument, bis es sich neu anmeldet.
+  await setDoc(`users/${leser}`, user(leser, null, ['demo-haus'], []));
+  await setDoc(`users/${superadmin}`, user(superadmin, ACCOUNTS.superadmin, [], []));
+  await setDoc(`users/${neu}`, user(neu, ACCOUNTS.neu, ['sandbox_monitor'], ['sandbox_monitor']));
 
   // Haushalt nur beim Beispielhaus; beim Studienhaus fragt die App danach.
   await setDoc('monitors/demo-haus/household/2026-02-01_1', {

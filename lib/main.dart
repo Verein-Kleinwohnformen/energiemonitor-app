@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+import 'admin/access.dart';
 import 'app/app.dart';
 import 'app/firestore_services.dart';
 import 'app/services.dart';
@@ -55,6 +56,7 @@ Future<void> main() async {
       entries: entries,
       status: status,
       household: household,
+      admin: FirestoreAdmin(),
       child: child,
     ),
   ));

@@ -8,6 +8,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+import '../admin/access.dart';
 import '../energy.dart';
 import '../household/household.dart';
 import '../metering_point.dart';
@@ -68,6 +69,7 @@ class AppServices extends InheritedWidget {
     required this.entries,
     required this.status,
     required this.household,
+    this.admin,
     this.clock = const SystemClock(),
     required super.child,
   });
@@ -75,6 +77,9 @@ class AppServices extends InheritedWidget {
   final ManualEntriesRepository entries;
   final StatusRepository status;
   final HouseholdRepository household;
+
+  /// Zugriffsverwaltung, nur fuer Superadmins genutzt.
+  final AdminRepository? admin;
   final Clock clock;
 
   static AppServices of(BuildContext context) {
@@ -88,6 +93,7 @@ class AppServices extends InheritedWidget {
       entries != old.entries ||
       status != old.status ||
       household != old.household ||
+      admin != old.admin ||
       clock != old.clock;
 }
 

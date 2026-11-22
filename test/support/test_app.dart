@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kwf_energiemonitor/admin/access.dart';
 import 'package:kwf_energiemonitor/app/services.dart';
 import 'package:kwf_energiemonitor/app/session.dart';
 import 'package:kwf_energiemonitor/app/session_scope.dart';
@@ -121,7 +122,7 @@ EnergieMonitor monitor({String id = 'demo', String name = 'Testhaus', bool study
 
 SessionData sessionData({
   bool study = false,
-  bool admin = false,
+  bool superadmin = false,
   bool canEdit = true,
   bool dialogSeen = true,
   List<EnergieMonitor>? monitors,
@@ -133,7 +134,7 @@ SessionData sessionData({
     displayName: 'Test',
     monitors: ms,
     editableIds: canEdit ? ms.map((m) => m.id).toSet() : {},
-    isAdmin: admin,
+    isSuperadmin: superadmin,
     studyDialogSeen: dialogSeen ? ms.map((m) => m.id).toSet() : {},
   );
 }
@@ -145,6 +146,7 @@ Widget wrap(
   ManualEntriesRepository? entries,
   StatusRepository? status,
   HouseholdRepository? household,
+  AdminRepository? admin,
 }) {
   return SessionScope(
     session: session,
@@ -152,6 +154,7 @@ Widget wrap(
       entries: entries ?? FakeEntries(),
       status: status ?? FakeStatus(),
       household: household ?? FakeHousehold(),
+      admin: admin,
       clock: FixedClock(kNow),
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -189,4 +192,54 @@ Future<void> setPhoneSize(WidgetTester tester, {Size size = const Size(390, 1100
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
+}
+
+
+/// Verwaltung ohne Firestore: Konten und Monitore wie im Emulator-Seed.
+class FakeAdmin implements AdminRepository {
+  FakeAdmin()
+      : accounts = [
+          const Account(uid: 'u-bewohner', email: 'bewohner@example.test',
+              read: ['demo-haus', 'demo-studie'], edit: ['demo-haus']),
+          const Account(uid: 'u-leser-alt', read: ['demo-haus']),
+          const Account(uid: 'u-neu', email: 'neu@example.test',
+              read: ['sandbox_monitor'], edit: ['sandbox_monitor']),
+        ],
+        monitors = [
+          monitor(id: 'demo-haus', name: 'Beispielhaus'),
+          monitor(id: 'demo-studie', name: 'Studienhaus', study: true),
+          monitor(id: 'sandbox_monitor', name: 'Testmonitor'),
+        ];
+
+  final List<Account> accounts;
+  final List<EnergieMonitor> monitors;
+  final saved = <({String uid, List<String> read, List<String> edit, String actor})>[];
+
+  @override
+  Stream<List<Account>> watchAccounts() => Stream.value(accounts);
+  @override
+  Stream<List<EnergieMonitor>> watchMonitors() => Stream.value(monitors);
+  @override
+  Stream<List<AccessLogEntry>> watchLog({int limit = 50}) => Stream.value([
+        AccessLogEntry(
+          actorUid: 'test-uid',
+          actorEmail: 'superadmin@example.test',
+          targetUid: 'u-bewohner',
+          targetEmail: 'bewohner@example.test',
+          beforeRead: const ['demo-haus'],
+          beforeEdit: const ['demo-haus'],
+          afterRead: const ['demo-haus', 'demo-studie'],
+          afterEdit: const ['demo-haus'],
+          at: DateTime(2026, 11, 21, 10, 15),
+        ),
+      ]);
+  @override
+  Future<void> saveAccess({
+    required Account account,
+    required List<String> read,
+    required List<String> edit,
+    required String actorUid,
+    String? actorEmail,
+  }) async =>
+      saved.add((uid: account.uid, read: read, edit: edit, actor: actorUid));
 }

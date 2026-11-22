@@ -16,6 +16,7 @@ abstract final class Routes {
   static const about = '/mehr/ueber';
   static const method = '/mehr/so-rechnen-wir';
   static const onboarding = '/willkommen';
+  static const admin = '/verwaltung';
 
   /// Seiten, die im Studienmodus nicht erscheinen, weil sie Verbrauch zeigen.
   static const hiddenInStudy = [overview, analysis, measurements, export, method];
