@@ -130,14 +130,13 @@ flutter_launcher_icons:
     image_path: "assets/logo.png"
     icon_size: 48
 
+# Der Startbildschirm im Browser ist von Hand gepflegt (web/index.html,
+# Design System SplashScreen) und passt zu lib/shell/splash_view.dart.
+# flutter_native_splash nur fuer Android und iOS, nie fuer Web.
 flutter_native_splash:
   color: "#FFFFFF"
   image: assets/logo.png
-  color_dark: "#1A1A1A"
-  image_dark: assets/logo.png
   android_12:
     image: assets/logo.png
     color: "#FFFFFF"
-    image_dark: assets/logo.png
-    color_dark: "#1A1A1A"
-  web: true
+  web: false
