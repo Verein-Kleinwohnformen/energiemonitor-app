@@ -50,7 +50,8 @@ Technik: Flutter (Dart `^3.5.3`), Firebase Auth, Firestore, Firebase Hosting. Di
 
 ### Sicherheit
 
-- Die Firebase-Web-Konfiguration in `lib/firebase_options.dart` ist **kein Geheimnis**, sondern wird mit jeder Web-App ausgeliefert. Der Schutz liegt in den [Firestore-Rules](firestore.rules) und in den Einschränkungen des API-Schlüssels (HTTP-Referrer und benötigte APIs) in der Google Cloud Console. Setze beides für dein eigenes Projekt.
+- Die Firebase-Web-Konfiguration in `lib/firebase_options.dart` ist **kein Geheimnis**, sondern wird mit jeder Web-App ausgeliefert. Der Schutz liegt in den [Firestore-Rules](firestore.rules) und in den Einschränkungen des API-Schlüssels in der Google Cloud Console: nur Firebase-Dienste und nur die eigenen Webadressen (HTTP-Referrer). Setze beides für dein eigenes Projekt.
+- Ein `*` ist in den erlaubten Webadressen nur ganz vorne vor einem Punkt möglich (`*.example.org`). Für einen Firebase-Hosting-Vorschaukanal (`<projekt>--<kanal>-<hash>.web.app`) die genaue Adresse eintragen, sonst scheitert dort die Anmeldung.
 - Die Rules erlauben Usern **nicht**, ihre eigenen Zugriffe (`monitor_read`, `monitor_edit`, `monitor_api_keys`) zu ändern. Zugriffe vergibt ein Superadmin in der App (Custom Claim `superadmin`, gesetzt mit `tool/admin/set_superadmin.mjs`), jede Änderung wird protokolliert. Neue Monitore legst du in der Firebase Console an. Teste Änderungen an den Rules im [Firestore-Emulator](https://firebase.google.com/docs/emulator-suite).
 - Device-Keys der API gehören nie ins Repo.
 
