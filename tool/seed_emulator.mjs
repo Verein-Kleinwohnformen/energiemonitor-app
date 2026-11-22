@@ -192,6 +192,59 @@ async function main() {
   await meteringPoint('demo-studie', 'E3', ['victron'], ['power'], recent);
   await meteringPoint('demo-studie', 'K0', ['netatmo'], ['temperature_indoor', 'humidity_indoor', 'co2_indoor'], now - 3 * 3600 * 1000);
 
+  // Faktoren (Etappe 2). Beispielwerte aus dem Konzept, keine geprueften Quellen.
+  await setDoc('config/factors', {
+    heating_values: {
+      pellets: { value: 4.8, unit: 'kWh/kg', source: 'Beispielwert Konzept (prüfen)' },
+      propane: { value: 12.8, unit: 'kWh/kg', source: 'Beispielwert Konzept (prüfen)' },
+    },
+    primary_energy_factors: {},
+    note: 'Beispieldaten im Emulator',
+  });
+
+  // Tageswerte der letzten 14 Tage fuer das Beispielhaus, im Format der
+  // energiemonitor-api (POST /aggregate). Erfundene, aber plausible Zahlen.
+  for (let i = 14; i >= 0; i--) {
+    const d = new Date(now - i * 86400_000);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const pv = Math.round((1.5 + 2 * Math.abs(Math.sin(i))) * 1000) / 1000;
+    const hourlyPv = Array.from({ length: 24 }, (_, h) => (h >= 9 && h < 16 ? Math.round((pv / 7) * 10000) / 10000 : 0));
+    const fire = i % 3 === 0;
+    await setDoc(`devices/demo-haus/daily/${key}`, {
+      date: key,
+      timezone: 'Europe/Zurich',
+      energy_kwh: { E1: Math.round(i % 4 === 0 ? 1.2 * 1000 : 0) / 1000, E3: pv, I2: i % 5 === 0 ? 1.8 : 0, I3: 2.3 },
+      energy_sensor: { E1: 'victron', E3: 'victron', I2: 'shelly-3em-pro', I3: 'shelly-3em-pro' },
+      hourly_kwh: { E3: hourlyPv },
+      availability: { E1: 1, E3: 1, I2: 1, I3: 1, K1: 0.99, K2: 0.99, K3: 0.99, K4: 0.99 },
+      climate: {
+        t_in_median: 20.5, t_in_p05: 17.9, t_in_p95: 24.6, t_in_max: 25.3, rh_in_median: 52, co2_median: 880,
+        co2_max: 1650, t_out_mean: 5.4, t_out_min: 1.2, t_out_max: 9.8, hours_over_28: 0, t_in_mean_08_20: 21.2,
+      },
+      climate_source: 'netatmo',
+      occupied: i !== 6,
+      occupancy_source: 'sensirion_scd4x',
+      co2_peak: i === 6 ? 470 : 1820,
+      fire_events: fire ? [{ start: '19:20', end: '22:40', start_ts: d.getTime(), end_ts: d.getTime(), rise_k_per_h: 5.8, weight: 3.33 }] : [],
+      fire_source: 'netatmo',
+      manual_alloc: {
+        pellets: {
+          quantity: fire ? 1.6 : 0, unit: 'kg', method: 'ofensignatur', provisional: i < 7, incomplete: false,
+          fires: fire ? 1 : 0, by_metering_point: { M2: fire ? 1.6 : 0 },
+        },
+        propane: {
+          quantity: i === 6 ? 0 : 0.06, unit: 'kg', method: 'bewohnte_tage', provisional: true, incomplete: false,
+          by_metering_point: { M1: i === 6 ? 0 : 0.06 },
+        },
+      },
+      manual_kwh_estimated: { pellets: fire ? 7.68 : 0, propane: i === 6 ? 0 : 0.768 },
+      partial: i === 0,
+      data_until: i === 0 ? recent : d.getTime(),
+      computed_at: new Date().toISOString(),
+      version: 1,
+    });
+  }
+
   console.log('Beispieldaten im Emulator angelegt. Konten (Passwort siehe tool/seed_emulator.mjs):');
   for (const [role, email] of Object.entries(ACCOUNTS)) console.log(`  ${role.padEnd(9)} ${email}`);
 }

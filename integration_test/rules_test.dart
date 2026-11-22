@@ -1,8 +1,8 @@
 // Firestore-Rules im Emulator (Konzept Umsetzung, Abschnitt 2; Etappe 1b).
 //
 // Prueft Haushalt, Zugriffsverwaltung durch den Superadmin (Custom Claim im
-// Login-Token), das Protokoll und dass die bestehenden Regeln gleich
-// geblieben sind. Jede Regel auch mit dem Fall, der abgelehnt werden muss.
+// Login-Token), das Protokoll, Tageswerte und Faktoren (Etappe 2) und dass
+// die bestehenden Regeln gleich geblieben sind. Jede Regel auch mit dem Fall, der abgelehnt werden muss.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -78,6 +78,11 @@ Future<void> prepareUsers() async {
       email: 'superadmin@example.test', monitorRead: [], monitorEdit: []);
   await EmulatorAdmin.setClaims(superadmin, {'superadmin': true});
   await EmulatorAdmin.setDoc('devices/$kOther/manual/2026/data/x', {'x': 1});
+  for (final m in [kMon, kOther]) {
+    await EmulatorAdmin.setDoc('devices/$m/daily/2026-11-20', {'date': '2026-11-20', 'version': 1});
+    await EmulatorAdmin.setDoc('devices/$m/aggregation/state', {'series': {}});
+  }
+  await EmulatorAdmin.setDoc('config/factors', {'heating_values': {}});
 }
 
 void main() {
@@ -314,6 +319,41 @@ void main() {
       await expectDenied(() => existing.update({'after_read': []}), 'Eintrag aendern');
       await expectDenied(() => existing.delete(), 'Eintrag loeschen');
       expect(s, isNotEmpty);
+    });
+  });
+
+  group('Tageswerte und Faktoren', () {
+    DocumentReference<Map<String, dynamic>> day(String m) =>
+        db.collection('devices').doc(m).collection('daily').doc('2026-11-20');
+    DocumentReference<Map<String, dynamic>> state(String m) =>
+        db.collection('devices').doc(m).collection('aggregation').doc('state');
+    // Als Funktion: Firebase ist erst im setUpAll bereit, nicht beim Registrieren der Tests.
+    DocumentReference<Map<String, dynamic>> factorsDoc() => db.collection('config').doc('factors');
+
+    testWidgets('Tageswerte lesen mit Zugriff, schreiben nie', (t) async {
+      await as('reader@example.test');
+      await expectAllowed(() => day(kMon).get(), 'Tageswerte lesen mit Leserecht');
+      await expectAllowed(
+          () => db.collection('devices').doc(kMon).collection('daily').get(), 'Tageswerte auflisten');
+      await expectDenied(() => day(kOther).get(), 'Tageswerte eines fremden Hauses');
+      await as('editor@example.test');
+      await expectDenied(() => day(kMon).set({'date': '2026-11-20'}), 'Tageswerte schreiben');
+      await expectDenied(() => day(kMon).update({'version': 2}), 'Tageswerte aendern');
+      await expectDenied(() => day(kMon).delete(), 'Tageswerte loeschen');
+      await expectDenied(() => state(kMon).get(), 'Stand der Verteilung lesen');
+      await expectDenied(() => state(kMon).set({'series': {}}), 'Stand der Verteilung schreiben');
+      await as('superadmin@example.test');
+      await expectDenied(() => day(kMon).get(), 'Superadmin ohne Zuordnung');
+    });
+
+    testWidgets('Faktoren lesen angemeldet, schreiben nie', (t) async {
+      await as('outsider@example.test');
+      await expectAllowed(() => factorsDoc().get(), 'Faktoren lesen');
+      await expectDenied(() => factorsDoc().set({'heating_values': {'pellets': 1}}), 'Faktoren aendern');
+      await as('superadmin@example.test');
+      await expectDenied(() => factorsDoc().set({'heating_values': {}}), 'Faktoren aendern als Superadmin');
+      await FirebaseAuth.instance.signOut();
+      await expectDenied(() => factorsDoc().get(), 'Faktoren ohne Anmeldung');
     });
   });
 

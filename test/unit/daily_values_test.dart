@@ -1,0 +1,78 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:kwf_energiemonitor/daily/daily_values.dart';
+
+void main() {
+  // Ausschnitt eines Dokuments, wie es die energiemonitor-api schreibt (Beispieldaten).
+  final doc = <String, dynamic>{
+    'date': '2026-05-15',
+    'timezone': 'Europe/Zurich',
+    'energy_kwh': {'E1': 0.0, 'E3': 3.4, 'I2': 0, 'I3': 2.3},
+    'energy_sensor': {'E1': 'victron'},
+    'hourly_kwh': {
+      'E3': [0, 0, 0, 0, 0, 0.05, 0.2, 0.4, 0.5, 0.6, 0.5, 0.4, 0.3, 0.2, 0.15, 0.1, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    'availability': {'E1': 1.0, 'K1': 0.98},
+    'climate': {'t_in_median': 21.4, 'co2_max': 1420, 'hours_over_28': 0, 't_out_mean': null},
+    'climate_source': 'netatmo',
+    'occupied': true,
+    'occupancy_source': 'sensirion_scd4x',
+    'fire_events': [
+      {'start': '20:20', 'end': '03:00', 'start_ts': 1, 'end_ts': 2, 'rise_k_per_h': 8.6, 'weight': 6.67}
+    ],
+    'manual_alloc': {
+      'pellets': {
+        'quantity': 2.079,
+        'unit': 'kg',
+        'method': 'ofensignatur',
+        'provisional': false,
+        'incomplete': false,
+        'fires': 1,
+        'by_metering_point': {'M2': 2.079}
+      },
+      'propane': {
+        'quantity': null,
+        'unit': 'kg',
+        'method': 'bewohnte_tage',
+        'provisional': true,
+        'incomplete': true,
+        'by_metering_point': {'M1': null}
+      },
+    },
+    'manual_kwh_estimated': {'pellets': 9.98},
+    'partial': false,
+    'data_until': 1778882390000,
+    'version': 1,
+  };
+
+  test('Tagesdokument lesen', () {
+    final d = DailyValues.fromFirestore('2026-05-15', doc)!;
+    expect(d.date, DateTime(2026, 5, 15));
+    expect(d.energyKwh, {'E1': 0.0, 'E3': 3.4, 'I2': 0.0, 'I3': 2.3});
+    expect(d.hourlyKwh['E3'], hasLength(24));
+    expect(d.availability['K1'], 0.98);
+    expect(d.climate['co2_max'], 1420);
+    expect(d.climate.containsKey('t_out_mean'), isTrue);
+    expect(d.climate['t_out_mean'], isNull);
+    expect(d.occupied, isTrue);
+    expect(d.fireEvents.single.start, '20:20');
+    expect(d.fireEvents.single.weight, 6.67);
+    final p = d.manualAlloc['pellets']!;
+    expect((p.quantity, p.method, p.provisional, p.fires), (2.079, 'ofensignatur', false, 1));
+    final g = d.manualAlloc['propane']!;
+    expect(g.quantity, isNull);
+    expect(g.incomplete, isTrue);
+    expect(g.byMeteringPoint, {'M1': null});
+    expect(d.manualKwhEstimated['pellets'], 9.98);
+    expect(d.dataUntil, DateTime.fromMillisecondsSinceEpoch(1778882390000));
+    expect(d.version, 1);
+  });
+
+  test('leeres oder kaputtes Dokument', () {
+    final d = DailyValues.fromFirestore('2026-05-16', {})!;
+    expect(d.date, DateTime(2026, 5, 16));
+    expect(d.energyKwh, isEmpty);
+    expect(d.occupied, isNull);
+    expect(DailyValues.fromFirestore('kein-datum', {}), isNull);
+    expect(DailyValues.keyOf(DateTime(2026, 1, 2)), '2026-01-02');
+  });
+}

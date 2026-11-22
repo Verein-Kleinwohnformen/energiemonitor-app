@@ -52,7 +52,30 @@ service cloud.firestore {
       allow read: if canReadDevice(deviceId);
       allow write: if false; // Telemetrie wird ausschließlich via energiemonitor-api geschrieben
     }
-    
+
+    // ========================================
+    // Tageswerte (Etappe 2)
+    // ========================================
+
+    // Ein Dokument pro Tag in Lokalzeit, gerechnet von der energiemonitor-api
+    // (POST /aggregate). Die App liest nur, schreibt nie.
+    match /devices/{deviceId}/daily/{day} {
+      allow read: if canReadDevice(deviceId);
+      allow write: if false;
+    }
+
+    // Stand der Verteilung der Brennstoffe, nur fuer das Backend.
+    match /devices/{deviceId}/aggregation/{docId} {
+      allow read, write: if false;
+    }
+
+    // Heizwerte und Primaerenergiefaktoren mit Quelle und Datum. Das Team
+    // pflegt sie in der Firebase Console; die App liest nur.
+    match /config/factors {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     // ========================================
     // Monitore (Energiemonitor-Geräte)
     // ========================================

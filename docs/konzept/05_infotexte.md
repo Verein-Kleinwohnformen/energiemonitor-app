@@ -88,7 +88,7 @@ Die Texte stehen nicht im Code verstreut, sondern in einer Datei `lib/info_texts
 **Wann wart ihr zu Hause?**
 - Was: An wie vielen Tagen jemand im Haus war.
 - Woher: **Diese Zahl ist nicht gemessen, sondern aus den CO2-Werten berechnet** (Sensirion SCD4x, sonst Netatmo).
-- Rechnung: Ein Tag gilt als bewohnt, wenn das CO2 irgendwann über 600 ppm steigt. Ein leeres Haus bleibt unter etwa 550 ppm. Wir nehmen den Höchstwert und nicht den Mittelwert, weil im Sommer bei offenen Fenstern der Mittelwert tief bleibt, auch wenn jemand da ist.
+- Rechnung: Ein Tag gilt als bewohnt, wenn das CO2 irgendwann über 600 ppm steigt. Ein leeres Haus bleibt unter etwa 550 ppm. Wir nehmen den Höchstwert und nicht den Mittelwert, weil im Sommer bei offenen Fenstern der Mittelwert tief bleibt, auch wenn jemand da ist. Bei der Netatmo zählt der Anstieg: Der Höchstwert muss mehr als 150 ppm über dem 10. Perzentil des Tages liegen, weil ihr Nullpunkt wandert (leeres Haus 600 bis 800 ppm).
 - Sicherheit: berechnet. Kurze Besuche oder offene Fenster den ganzen Tag können falsch erkannt werden. Gegenprobe mit dem Stromverbrauch der Kleinverbraucher.
 
 **CO2 über den Tag (Heatmap)**
