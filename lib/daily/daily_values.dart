@@ -84,10 +84,16 @@ class DailyValues {
     this.hourlyKwh = const {},
     this.availability = const {},
     this.climate = const {},
+    this.hourlyClimate = const {},
     this.climateSource,
     this.occupied,
     this.occupancySource,
+    this.co2Peak,
+    this.co2Rise,
     this.fireEvents = const [],
+    this.fireSource,
+    this.energySensor = const {},
+    this.computedAt,
     this.manualAlloc = const {},
     this.manualKwhEstimated = const {},
     this.partial = false,
@@ -109,12 +115,27 @@ class DailyValues {
 
   /// Klimawerte, z.B. t_in_median, co2_max, t_out_mean, hours_over_28.
   final Map<String, double?> climate;
+
+  /// Median pro Stunde auf der Uhr (24 Werte, null ohne Daten) fuer `t_in`
+  /// und `co2`. Grundlage der Heatmap und der Komfortstunden.
+  final Map<String, List<double?>> hourlyClimate;
   final String? climateSource;
 
   /// Bewohnt (aus CO2 berechnet, nicht gemessen). null: unbekannt.
   final bool? occupied;
   final String? occupancySource;
+
+  /// Hoechstwert CO2 des Tages (Rohwert) und Anstieg ueber dem 10. Perzentil.
+  final double? co2Peak;
+  final double? co2Rise;
   final List<FireEvent> fireEvents;
+
+  /// Sensor der Ofensignatur (netatmo, sensirion) oder null.
+  final String? fireSource;
+
+  /// Welcher Sensor pro Messpunkt gezaehlt wurde.
+  final Map<String, String> energySensor;
+  final DateTime? computedAt;
 
   /// Brennstoffe nach Energietraeger (pellets, propane, woodKg, ...), geschaetzt.
   final Map<String, FuelAllocation> manualAlloc;
@@ -149,9 +170,25 @@ class DailyValues {
       climate: {
         for (final e in ((data['climate'] as Map?) ?? const {}).entries) '${e.key}': _num(e.value),
       },
+      hourlyClimate: {
+        for (final e in ((data['hourly_climate'] as Map?) ?? const {}).entries)
+          '${e.key}': [for (final v in (e.value as List? ?? const [])) _num(v)],
+      },
       climateSource: data['climate_source'] as String?,
       occupied: data['occupied'] as bool?,
       occupancySource: data['occupancy_source'] as String?,
+      co2Peak: _num(data['co2_peak']),
+      co2Rise: _num(data['co2_rise']),
+      fireSource: data['fire_source'] as String?,
+      energySensor: {
+        for (final e in ((data['energy_sensor'] as Map?) ?? const {}).entries)
+          '${e.key}': '${e.value}',
+      },
+      computedAt: switch (data['computed_at']) {
+        Timestamp t => t.toDate(),
+        String s => DateTime.tryParse(s),
+        _ => null,
+      },
       fireEvents: [
         for (final f in (data['fire_events'] as List? ?? const [])) ?FireEvent.fromMap(f),
       ],
@@ -175,12 +212,37 @@ Map<String, double> _numMap(Object? raw) => {
           if (e.value is num) '${e.key}': (e.value as num).toDouble(),
     };
 
-/// Tageswerte eines Monitors fuer einen Zeitraum lesen (beide Tage inklusive).
-class FirestoreDaily {
+/// Tageswerte eines Monitors fuer einen Zeitraum (beide Tage inklusive),
+/// aeltester zuerst.
+abstract class DailyRepository {
+  Future<List<DailyValues>> load(String monitorId, DateTime from, DateTime to);
+}
+
+/// Liest aus Firestore und behaelt das Ergebnis 10 Minuten. Die API rechnet
+/// stuendlich, oefter lesen bringt nichts.
+class FirestoreDaily implements DailyRepository {
   FirestoreDaily([FirebaseFirestore? db]) : _db = db ?? FirebaseFirestore.instance;
   final FirebaseFirestore _db;
+  final _cache = <String, (DateTime, Future<List<DailyValues>>)>{};
+  static const _keep = Duration(minutes: 10);
 
-  Future<List<DailyValues>> load(String monitorId, DateTime from, DateTime to) async {
+  @override
+  Future<List<DailyValues>> load(String monitorId, DateTime from, DateTime to) {
+    final key = '$monitorId/${keyOf(from)}/${keyOf(to)}';
+    final hit = _cache[key];
+    if (hit != null && DateTime.now().difference(hit.$1) < _keep) return hit.$2;
+    final f = _read(monitorId, from, to);
+    _cache[key] = (DateTime.now(), f);
+    f.catchError((Object _) {
+      _cache.remove(key);
+      return const <DailyValues>[];
+    });
+    return f;
+  }
+
+  static String keyOf(DateTime d) => DailyValues.keyOf(d);
+
+  Future<List<DailyValues>> _read(String monitorId, DateTime from, DateTime to) async {
     final snap = await _db
         .collection('devices')
         .doc(monitorId)

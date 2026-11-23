@@ -57,7 +57,8 @@ node tool/admin/backfill_emails.mjs --project <projekt> --apply
 | `lib/more/` | Seiten unter "Mehr" |
 | `lib/info/` | Info-Overlay und Texte (`info_texts.dart`) |
 | `lib/admin/` | Verwaltung der Zugänge (Superadmin) |
-| `lib/daily/` | Tageswerte aus `daily` lesen (gerechnet von der API) |
+| `lib/daily/` | Tageswerte aus `daily` und Faktoren lesen, über Zeiträume zusammenfassen |
+| `lib/charts/` | Diagramm-Bausteine nach dem Design System (KpiTile, RangeSwitch, Balken, Ring, Klima, Heatmap) |
 | `lib/theme/` | Tokens und Theme aus dem Design System des Vereins |
 | `integration_test/` | Tests im Browser gegen den Emulator |
 | `tool/` | Testlauf, Beispieldaten für den Emulator |

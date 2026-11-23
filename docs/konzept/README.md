@@ -23,4 +23,4 @@ Diese Dokumente beschreiben, wie die App aufgebaut ist und warum. Sie sind die �
 | 1 | Neue Navigation, Theme, Studienmodus, Status, Erfassen, Mehr, Haushalt | umgesetzt |
 | 1b | Superadmin mit Verwaltung der Zugänge, strengere Rules, keine Admin-Rolle | umgesetzt |
 | 2 | Tageswerte in der API (Energie, Klima, Belegung, Verteilung der Brennstoffe) | umgesetzt, läuft seit 22.11.2026 stündlich |
-| 3 | Übersicht und Auswertung mit Diagrammen | geplant |
+| 3 | Übersicht und Auswertung mit Diagrammen | umgesetzt 23.11.2026 (Rechnung in `lib/daily/summary.dart`, Diagramme in `lib/charts/`) |

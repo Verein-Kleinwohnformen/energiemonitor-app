@@ -97,6 +97,8 @@ Von oben nach unten:
    - "Heute Nacht CO2 bis 2'100 ppm. Lüften lohnt sich." (nur wenn K4 vorhanden)
 5. Link "Zur Auswertung".
 
+**Umsetzung (Etappe 3, 23.11.2026):** Der Satz rechnet mit der Endenergie (Netz, selbst genutzter Solarstrom, Brennstoffe mit Heizwert) von Montag bis zum letzten Messwert. Die Kacheln zeigen den Verlauf der letzten sieben Tage. Ohne Klimasensor fällt die Klima-Kachel weg. Brennstoffe, die ohne Klimasensor nur gleichmässig verteilt sind, stehen als Wochensumme unter den Balken. Hinweise: Vorrat seit über 60 Tagen ohne Eintrag (Schwelle prüfen), Aussensensor über 40 °C, CO2 letzte Nacht über 2'000 ppm. Ohne Tageswerte steht eine ruhige Karte.
+
 ### 5.2 Auswertung
 
 Zeitraum-Umschalter oben (Komponente `RangeSwitch`): **Woche · Monat · Saison bis jetzt · Jahr**. Mit Pfeilen links und rechts blättert man zur vorherigen Woche, zum vorherigen Monat usw.
@@ -116,9 +118,17 @@ Abschnitte in dieser Reihenfolge:
 2. **Woher kommt die Energie?** `EnergyMixDonut` mit Direktbeschriftung: Sonne, Netz, Gas, Holz/Pellets. Daneben `AutarkyRing` Eigenversorgung Strom.
 3. **Monat für Monat.** `MonthlyBars` gestapelt nach Energieträger, Linie Verbrauch.
 4. **Heizen.** Heizenergie pro Monat (I2 und M2), Anteil Solarstrom an der Heizenergie.
-5. **Wohnklima.** `ClimateTile` für Temperatur, Feuchte, CO2 (Median an bewohnten Tagen), `ComfortZone` Anteil der Zeit im Bereich 20 bis 26 °C, Stunden über 28 °C, heisseste Woche.
+5. **Wohnklima.** `ClimateTile` für Temperatur, Feuchte, CO2 (Median an bewohnten Tagen), `ComfortZone` Anteil der Zeit im Bereich 20 bis 26 °C (Entscheid 23.11.2026, gilt auch für die Kachel), Stunden über 28 °C, heisseste Woche.
 6. **Belegung.** Titel "Wann wart ihr zu Hause?", direkt in der Unterzeile: "Berechnet aus den CO2-Werten, nicht gemessen". Bewohnte Tage, `Co2Heatmap` Wochentag × Stunde.
 7. Fusszeile "So rechnen wir": Faktoren und Systemgrenze, verlinkt auf eine kurze Methoden-Seite in "Mehr > Über die App".
+
+**Umsetzung (Etappe 3, 23.11.2026):**
+
+- Standard ist "Jahr", wenn Daten ab der ersten Woche des Jahreszeitraums und an mindestens 300 Tagen da sind, sonst "Saison". Das Jahr sind 12 ganze Monate bis und mit dem laufenden.
+- **Watt pro Person zweimal** (Entscheid 23.11.2026): oben nach Minergie gegen den Label-Wert aus "Haushalt", darunter nach 2000 Watt (Primärenergie KBOB, ohne eigenen Solarstrom) gegen 2000-Watt-Ziel und Schweiz heute. Beide Blöcke auf derselben Skala. Der Schalter "mit Solarstrom" lässt bei Minergie die Gutschrift weg. Tage ohne Personen im Haushalt zählen nicht mit, ein Hinweis nennt sie.
+- Bei Woche und Monat zeigt Abschnitt 3 Tagesbalken statt Monatsbalken. Abschnitt 4 erscheint nur mit Heizstrom (I2) oder Brennstoff fürs Heizen (M2).
+- Ohne Klimasensor fallen Wohnklima und Belegung weg, an ihrer Stelle steht ein Hinweis mit Link aufs Mess-Schema.
+- Die CO2-Heatmap erscheint ab 28 Tagen mit CO2-Werten. Sie zeigt nur den Wert, keinen abgeleiteten Zustand, weil die Schwelle der Netatmo vom Tag abhängt.
 
 ### 5.3 Erfassen
 

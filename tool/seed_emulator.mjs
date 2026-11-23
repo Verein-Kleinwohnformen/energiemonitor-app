@@ -163,8 +163,8 @@ async function main() {
   await setDoc(`users/${neu}`, user(neu, ACCOUNTS.neu, ['sandbox_monitor'], ['sandbox_monitor']));
 
   // Haushalt nur beim Beispielhaus; beim Studienhaus fragt die App danach.
-  await setDoc('monitors/demo-haus/household/2026-02-01_1', {
-    valid_from: '2026-02-01', persons: 2, living_area_m2: 16, label_w_per_person: 90, updated_by: bewohner, updated_at: new Date(),
+  await setDoc('monitors/demo-haus/household/2025-10-01_1', {
+    valid_from: '2025-10-01', persons: 2, living_area_m2: 16, label_w_per_person: 90, updated_by: bewohner, updated_at: new Date(),
   });
 
   for (const device of ['demo-haus', 'demo-studie']) {
@@ -192,54 +192,100 @@ async function main() {
   await meteringPoint('demo-studie', 'E3', ['victron'], ['power'], recent);
   await meteringPoint('demo-studie', 'K0', ['netatmo'], ['temperature_indoor', 'humidity_indoor', 'co2_indoor'], now - 3 * 3600 * 1000);
 
-  // Faktoren (Etappe 2). Beispielwerte aus dem Konzept, keine geprueften Quellen.
+  // Faktoren wie in /config/factors der Produktion (oeffentliche Quellen),
+  // dazu die Vergleichswerte fuer Watt pro Person (Etappe 3).
   await setDoc('config/factors', {
     heating_values: {
-      pellets: { value: 4.8, unit: 'kWh/kg', source: 'Beispielwert Konzept (prüfen)' },
-      propane: { value: 12.8, unit: 'kWh/kg', source: 'Beispielwert Konzept (prüfen)' },
+      pellets: { value: 5.0, unit: 'kWh/kg', source: 'LWF Bayern, Merkblatt 12, November 2024' },
+      woodKg: { value: 4.235, unit: 'kWh/kg', source: 'LWF Bayern, Merkblatt 12, November 2024' },
+      woodSter: { value: 1627.5, unit: 'kWh/Ster', source: 'LWF Bayern, Merkblatt 12, November 2024' },
+      propane: { value: 12.861, unit: 'kWh/kg', source: 'BAFU, Faktenblatt CO2-Emissionsfaktoren, Januar 2026' },
+      oil: { value: 9.998, unit: 'kWh/Liter', source: 'BAFU, Faktenblatt CO2-Emissionsfaktoren, Januar 2026' },
     },
-    primary_energy_factors: {},
+    weighting_factors: {
+      electricity: 2.0, pellets: 0.5, woodKg: 0.5, woodSter: 0.5, propane: 1.0, oil: 1.0, diesel: 1.0, gasoline: 1.0,
+      pv_self_consumption_credit: 1.0, pv_feed_in_credit: 0.4,
+      source: 'Minergie, Produktreglement Gebäudestandards Version 2026.1',
+    },
+    primary_energy_factors: {
+      unit: 'kWh oil-eq pro kWh Endenergie',
+      electricity: { total: 2.65, name: 'CH-Verbrauchermix' },
+      pellets: { total: 1.18 }, woodKg: { total: 1.05 }, woodSter: { total: 1.05 },
+      propane: { total: 1.22 }, oil: { total: 1.26 },
+      source: 'KBOB/ecobau-Liste 2022, Version 9.0',
+    },
+    benchmarks: {
+      target_2000w: { label: '2000-Watt-Ziel', value: 420, method: '2000watt', source: 'KWF-Energielabel, Bereich Wohnen' },
+      ch_today: { label: 'Schweiz heute', value: 1300, method: '2000watt', source: 'KWF-Energielabel, Bereich Wohnen' },
+    },
+    updated_at: '2026-11-23',
     note: 'Beispieldaten im Emulator',
   });
 
-  // Tageswerte der letzten 14 Tage fuer das Beispielhaus, im Format der
-  // energiemonitor-api (POST /aggregate). Erfundene, aber plausible Zahlen.
-  for (let i = 14; i >= 0; i--) {
-    const d = new Date(now - i * 86400_000);
+  // Tageswerte der letzten 400 Tage fuer das Beispielhaus, im Format der
+  // energiemonitor-api (POST /aggregate). Erfundene, aber plausible Zahlen:
+  // Sonne im Sommer, Heizung und Pelletofen im Winter, einzelne Luecken.
+  const r = (v, d = 3) => Math.round(v * 10 ** d) / 10 ** d;
+  const today = new Date(now);
+  for (let back = 400; back >= 0; back--) {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - back);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const pv = Math.round((1.5 + 2 * Math.abs(Math.sin(i))) * 1000) / 1000;
-    const hourlyPv = Array.from({ length: 24 }, (_, h) => (h >= 9 && h < 16 ? Math.round((pv / 7) * 10000) / 10000 : 0));
-    const fire = i % 3 === 0;
+    const doy = Math.round((d - new Date(d.getFullYear(), 0, 1)) / 86400_000);
+    const i = Math.round((d - new Date(2025, 0, 1)) / 86400_000);
+    const season = Math.cos((2 * Math.PI * (doy - 15)) / 365);
+    const noise = Math.sin(i * 1.7);
+    const pv = Math.max(0.2, 2.8 - 1.8 * season + 0.8 * noise);
+    const i3 = 2.1 + 0.3 * Math.sin(i * 0.9);
+    const i2 = season > 0.3 ? r(1.6 * season + 0.3 * noise) : 0;
+    const need = i2 + i3 + 0.08 + 0.3;
+    const feed = Math.max(0, pv - need) * 0.7;
+    const grid = Math.max(0, need - (pv - feed));
+    const occupied = i % 9 !== 0;
+    const gappy = i % 23 === 0;
+    const partial = back === 0;
+    const tIn = 21.6 - 1.4 * season + 0.6 * noise;
+    const fire = season > 0.35 && occupied;
+    const provisional = back < 20;
+    const pellets = fire ? r(1.1 + 0.6 * season) : 0;
+    const propane = occupied ? 0.07 : 0;
+    const hourlyPv = Array.from({ length: 24 }, (_, h) => (h >= 9 && h < 16 ? r(pv / 7, 4) : 0));
     await setDoc(`devices/demo-haus/daily/${key}`, {
       date: key,
       timezone: 'Europe/Zurich',
-      energy_kwh: { E1: Math.round(i % 4 === 0 ? 1.2 * 1000 : 0) / 1000, E3: pv, I2: i % 5 === 0 ? 1.8 : 0, I3: 2.3 },
-      energy_sensor: { E1: 'victron', E3: 'victron', I2: 'shelly-3em-pro', I3: 'shelly-3em-pro' },
+      energy_kwh: { E1: r(grid), E2: r(feed), E3: r(pv), I2: i2, I3: r(i3), A1: 0.08 },
+      energy_sensor: { E1: 'victron', E2: 'victron', E3: 'victron', I2: 'shelly-3em-pro', I3: 'shelly-3em-pro', A1: 'shelly-3em-pro' },
       hourly_kwh: { E3: hourlyPv },
-      availability: { E1: 1, E3: 1, I2: 1, I3: 1, K1: 0.99, K2: 0.99, K3: 0.99, K4: 0.99 },
+      availability: { E1: gappy ? 0.82 : 1, E3: gappy ? 0.82 : 1, I2: 1, I3: 1, K1: 0.98, K2: 0.98, K3: 0.98, K4: 0.98 },
       climate: {
-        t_in_median: 20.5, t_in_p05: 17.9, t_in_p95: 24.6, t_in_max: 25.3, rh_in_median: 52, co2_median: 880,
-        co2_max: 1650, t_out_mean: 5.4, t_out_min: 1.2, t_out_max: 9.8, hours_over_28: 0, t_in_mean_08_20: 21.2,
+        t_in_median: r(tIn, 1), t_in_p05: r(tIn - 2, 1), t_in_p95: r(tIn + 2.4, 1), t_in_max: r(tIn + 3, 1),
+        rh_in_median: r(48 + 6 * season + 3 * noise, 0), co2_median: r(occupied ? 880 + 200 * season : 520, 0),
+        co2_max: occupied ? 1650 : 560, t_out_mean: r(10 - 9 * season, 1), t_out_min: r(5 - 9 * season, 1),
+        t_out_max: r(15 - 10 * season, 1), hours_over_28: season < -0.75 ? r(2.5 - 2 * season + noise, 1) : 0,
+        t_in_mean_08_20: r(tIn + 0.8, 1),
+      },
+      hourly_climate: {
+        t_in: Array.from({ length: 24 }, (_, h) => r(tIn + 1.6 * Math.sin(((h - 9) / 24) * 2 * Math.PI), 1)),
+        co2: Array.from({ length: 24 }, (_, h) => (occupied ? (h >= 22 || h < 7 ? r(1250 + 250 * season, 0) : r(700 + 50 * noise, 0)) : 520)),
       },
       climate_source: 'netatmo',
-      occupied: i !== 6,
+      occupied,
       occupancy_source: 'sensirion_scd4x',
-      co2_peak: i === 6 ? 470 : 1820,
-      fire_events: fire ? [{ start: '19:20', end: '22:40', start_ts: d.getTime(), end_ts: d.getTime(), rise_k_per_h: 5.8, weight: 3.33 }] : [],
+      co2_peak: occupied ? 1820 : 470,
+      fire_events: fire ? [{ start: '06:00', end: '10:20', start_ts: d.getTime(), end_ts: d.getTime(), rise_k_per_h: 6.1, weight: 4.33 }] : [],
       fire_source: 'netatmo',
       manual_alloc: {
         pellets: {
-          quantity: fire ? 1.6 : 0, unit: 'kg', method: 'ofensignatur', provisional: i < 7, incomplete: false,
-          fires: fire ? 1 : 0, by_metering_point: { M2: fire ? 1.6 : 0 },
+          quantity: pellets, unit: 'kg', method: 'ofensignatur', provisional, incomplete: false,
+          fires: fire ? 1 : 0, by_metering_point: { M2: pellets },
         },
         propane: {
-          quantity: i === 6 ? 0 : 0.06, unit: 'kg', method: 'bewohnte_tage', provisional: true, incomplete: false,
-          by_metering_point: { M1: i === 6 ? 0 : 0.06 },
+          quantity: propane, unit: 'kg', method: 'bewohnte_tage', provisional, incomplete: false,
+          by_metering_point: { M1: propane },
         },
       },
-      manual_kwh_estimated: { pellets: fire ? 7.68 : 0, propane: i === 6 ? 0 : 0.768 },
-      partial: i === 0,
-      data_until: i === 0 ? recent : d.getTime(),
+      manual_kwh_estimated: { pellets: r(pellets * 5), propane: r(propane * 12.861) },
+      partial,
+      data_until: partial ? recent : d.getTime() + 86399_000,
       computed_at: new Date().toISOString(),
       version: 1,
     });

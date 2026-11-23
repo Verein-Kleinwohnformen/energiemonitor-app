@@ -92,9 +92,11 @@ abstract final class InfoTexts {
   static const autarky = InfoText(
     title: 'Eigenversorgung Strom',
     what: 'Welcher Teil eures Stroms nicht aus dem Netz kam.',
-    source: 'Netzbezug E1 und Stromverbrauch (Heizung I2, Kleinverbraucher I3, Monitor A1).',
-    method: '1 minus Netzbezug geteilt durch Verbrauch. Batterieverluste sind im '
-        'Verbrauch nicht enthalten.',
+    source: 'Netzbezug E1, Solarstrom E3 und Einspeisung E2 vom Victron.',
+    // TODO(prüfen): Rechnung ueber den Bezug statt ueber den Verbrauch mit der HSLU.
+    method: 'Selbst genutzter Solarstrom (E3 minus Einspeisung E2) geteilt durch selbst '
+        'genutzten Solarstrom plus Netzbezug. Batterieverluste zählen mit. Eigenverbrauch: '
+        'selbst genutzter Teil des Solarstroms.',
     certainty: 'Berechnet aus Messwerten.',
   );
 
@@ -102,8 +104,8 @@ abstract final class InfoTexts {
     title: 'Wohnklima',
     what: 'Temperatur, Feuchte und CO2 an eurem Lieblingsort.',
     source: 'Netatmo-Station innen (für die Studie gültiger Sensor).',
-    method: 'Median an bewohnten Tagen. Bereich = 5. bis 95. Perzentil. Gut: 20 bis '
-        '24 °C, 30 bis 60 % Feuchte, CO2 unter 1\'000 ppm.',
+    method: 'Median an bewohnten Tagen. Bereich = 5. bis 95. Perzentil der Stundenwerte. '
+        'Behaglich: 20 bis 26 °C, 30 bis 60 % Feuchte, CO2 unter 1\'000 ppm.',
     certainty: 'Gemessen, alle 10 Minuten.',
   );
 
@@ -114,8 +116,8 @@ abstract final class InfoTexts {
     method: 'Sonne und Netz gemessen. Pellets verteilen wir auf die Abende, an denen die '
         'Innentemperatur schnell stieg und keine elektrische Heizung lief (Ofensignatur). '
         'Gas verteilen wir gleichmässig auf die Tage, an denen jemand zu Hause war.',
-    certainty: 'Strom gemessen, Pellets und Gas geschätzt (gestrichelt). Die Schätzung '
-        'wird genauer, sobald du den nächsten Eintrag machst.',
+    certainty: 'Strom gemessen, Pellets und Gas geschätzt (hellere Fläche mit Rand). Die '
+        'Schätzung wird genauer, sobald du den nächsten Eintrag machst.',
   );
 
   static const woodEstimated = InfoText(
@@ -142,20 +144,25 @@ abstract final class InfoTexts {
 
   static const wattPerPerson = InfoText(
     title: 'Watt pro Person',
-    what: 'Eure Energie als Dauerleistung pro Person, vergleichbar mit dem Energielabel '
-        'und dem 2000-Watt-Ziel.',
-    source: 'Netzstrom E1, Brennstoffe aus deinen Einträgen, Personen aus "Haushalt".',
-    method: 'Primärenergie (Netzstrom und Brennstoffe mal Primärenergiefaktor nach KBOB, '
-        '{faktoren}) geteilt durch die Stunden im Zeitraum und die Personen. Eigener '
-        'Solarstrom zählt nicht (Systemgrenze wie Minergie und KWF-Energielabel).',
-    certainty: 'Berechnet, Brennstoffe geschätzt. Vergleichswerte: KWF-Energielabel '
-        '(Schweiz heute 1\'300 W, Ziel 420 W, Bereich Wohnen).',
+    what: 'Eure Energie als Dauerleistung pro Person, zweimal gerechnet: nach Minergie '
+        '(vergleichbar mit dem Energielabel) und nach der 2000-Watt-Methodik (vergleichbar '
+        'mit dem 2000-Watt-Ziel und der Schweiz heute).',
+    source: 'Strom vom Victron (Netz E1, Sonne E3, Einspeisung E2), Brennstoffe aus deinen '
+        'Einträgen, Personen aus "Haushalt".',
+    method: 'Minergie: Strom und Brennstoffe mal Gewichtungsfaktor ({gewichtung}), selbst '
+        'genutzter Solarstrom ganz und eingespeister zu {einspeisung} gutgeschrieben. '
+        '2000 Watt: Netzstrom und Brennstoffe mal Primärenergiefaktor nach KBOB ({faktoren}), '
+        'eigener Solarstrom zählt nicht. Beides geteilt durch die Stunden im Zeitraum und '
+        'die Personen.',
+    certainty: 'Berechnet, Brennstoffe geschätzt. Die beiden Methoden ergeben '
+        'verschiedene Zahlen, darum steht jeder Wert neben den Vergleichswerten seiner '
+        'Methode.',
   );
 
   static const energyMix = InfoText(
     title: 'Energiequellen-Mix',
     what: 'Woher die verbrauchte Energie kam.',
-    source: 'Sonne E3, Netz E1, Brennstoffe aus deinen Einträgen.',
+    source: 'Sonne E3 (ohne Einspeisung E2), Netz E1, Brennstoffe aus deinen Einträgen.',
     method: 'Anteile an der Endenergie in kWh. {nicht_berechenbar} ist nicht enthalten, '
         'weil es dafür erst einen Eintrag gibt. Für einen Verbrauch braucht es zwei.',
     certainty: 'Strom gemessen, Brennstoffe geschätzt.',

@@ -14,6 +14,14 @@ void main() {
     'availability': {'E1': 1.0, 'K1': 0.98},
     'climate': {'t_in_median': 21.4, 'co2_max': 1420, 'hours_over_28': 0, 't_out_mean': null},
     'climate_source': 'netatmo',
+    'hourly_climate': {
+      'co2': [for (var h = 0; h < 24; h++) h == 3 ? null : 600 + h],
+      't_in': [for (var h = 0; h < 24; h++) 20.5],
+    },
+    'co2_peak': 1420,
+    'co2_rise': 610,
+    'fire_source': 'netatmo',
+    'computed_at': '2026-05-16T01:30:00+00:00',
     'occupied': true,
     'occupancy_source': 'sensirion_scd4x',
     'fire_events': [
@@ -54,6 +62,12 @@ void main() {
     expect(d.climate.containsKey('t_out_mean'), isTrue);
     expect(d.climate['t_out_mean'], isNull);
     expect(d.occupied, isTrue);
+    expect(d.hourlyClimate['co2']![3], isNull);
+    expect(d.hourlyClimate['co2']![4], 604);
+    expect(d.hourlyClimate['t_in'], hasLength(24));
+    expect((d.co2Peak, d.co2Rise, d.fireSource), (1420, 610, 'netatmo'));
+    expect(d.energySensor, {'E1': 'victron'});
+    expect(d.computedAt, DateTime.utc(2026, 5, 16, 1, 30));
     expect(d.fireEvents.single.start, '20:20');
     expect(d.fireEvents.single.weight, 6.67);
     final p = d.manualAlloc['pellets']!;

@@ -10,6 +10,8 @@ import 'app/app.dart';
 import 'app/firestore_services.dart';
 import 'app/services.dart';
 import 'app/session.dart';
+import 'daily/daily_values.dart';
+import 'daily/factors.dart';
 import 'firebase_options.dart';
 import 'platform/emulator_reset.dart';
 import 'platform/web_splash.dart';
@@ -47,6 +49,8 @@ Future<void> main() async {
   final entries = FirestoreManualEntries();
   final status = FirestoreStatus();
   final household = FirestoreHousehold(uid: () => session.uid ?? 'unbekannt');
+  final daily = FirestoreDaily();
+  final factors = FirestoreFactors();
   // Bei Abmelden in einem anderen Tab die Session neu laden.
   FirebaseAuth.instance.authStateChanges().skip(1).listen((_) => session.load());
   session.load();
@@ -60,6 +64,8 @@ Future<void> main() async {
       entries: entries,
       status: status,
       household: household,
+      daily: daily,
+      factors: factors,
       admin: FirestoreAdmin(),
       child: child,
     ),

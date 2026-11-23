@@ -90,8 +90,7 @@ void main() {
   testWidgets('normaler Modus: vier Tabs, kein Band', (tester) async {
     await pumpApp(tester, AppSession.fixed(sessionData()));
     expect(tabLabels(tester), ['Übersicht', 'Auswertung', 'Erfassen', 'Mehr']);
-    expect(find.text('Auswertungen folgen. Hier siehst du bald, wie viel Energie ihr diese '
-        'Woche gebraucht habt und woher sie kam.'), findsOneWidget);
+    expect(find.textContaining('Die ersten Tageswerte kommen'), findsOneWidget);
     expect(find.textContaining('Studienmodus aktiv'), findsNothing);
   });
 

@@ -30,8 +30,8 @@ void main() {
   test('Schweizer Rechtschreibung und keine Heizwerte im Code', () {
     final heatingValue = RegExp(r'\d+(\.\d+)? kWh/kg');
     // Nur Code des Neukonzepts; aeltere Dateien bleiben, wie sie sind.
-    const dirs = ['admin', 'app', 'analysis', 'auth', 'capture', 'household', 'info', 'more',
-        'overview', 'platform', 'shell', 'status', 'study', 'theme', 'util'];
+    const dirs = ['admin', 'app', 'analysis', 'auth', 'capture', 'charts', 'daily', 'household',
+        'info', 'more', 'overview', 'platform', 'shell', 'status', 'study', 'theme', 'util'];
     final files = dirs.expand((d) => Directory('lib/$d').listSync(recursive: true)).whereType<File>();
     for (final f in files) {
       if (!f.path.endsWith('.dart')) continue;
