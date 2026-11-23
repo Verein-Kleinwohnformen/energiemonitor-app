@@ -6,7 +6,11 @@ Web-App für den [KWF Energiemonitor](https://github.com/Verein-Kleinwohnformen/
 
 Wenn du für die Energiestudie einen Monitor baust, nutzt du diese App unter der Adresse oben (Variante A). Nach der Freischaltung durch das Team siehst du dort deine Messpunkte. Mehr dazu in der [Doku](https://github.com/Verein-Kleinwohnformen/energiemonitor-docs/blob/main/docs/variante-a-mitmachen.md).
 
-<img src="img/mon1.jpg" alt="Manuelle Energieträger" width="200"/> <img src="img/mon2.jpg" alt="Energieträger hinzufügen" width="200"/>
+| Übersicht | Auswertung | Monat für Monat | Erfassen | Mehr |
+|---|---|---|---|---|
+| <img src="img/screenshots/uebersicht.png" alt="Übersicht: Verbrauch dieser Woche, Eigenversorgung, Wohnklima" width="160"/> | <img src="img/screenshots/auswertung-energie.png" alt="Auswertung: Woher kommt die Energie, Eigenversorgung und Eigenverbrauch" width="160"/> | <img src="img/screenshots/auswertung-monate.png" alt="Auswertung: Energie Monat für Monat und Heizen" width="160"/> | <img src="img/screenshots/erfassen.png" alt="Erfassen: Vorrat an Holzpellets und Propangas" width="160"/> | <img src="img/screenshots/mehr-systemstatus.png" alt="Mehr: Systemstatus der Messpunkte" width="160"/> |
+
+Beispielhaus mit Demodaten aus dem Firebase-Emulator (`tool/seed_emulator.mjs`), keine echten Messwerte.
 
 ## Funktionen
 
@@ -15,12 +19,17 @@ Wenn du für die Energiestudie einen Monitor baust, nutzt du diese App unter der
 - Status-Pille und Systemstatus: kommen die Daten des Monitors an?
 - Energieträger erfassen (Holz in Ster oder kg, Pellets, Propan, Heizöl, Diesel, Benzin) mit Vorrat, Vorbelegung und Erinnerung
 - Haushalt (Personen, Wohnfläche) mit Verlauf
+- Übersicht: Verbrauch der Woche in einem Satz, Kacheln für Verbrauch pro Person, Eigenversorgung und Wohnklima, Energie pro Tag
+- Auswertung über Woche, Monat, Saison oder Jahr: Watt pro Person (nach Minergie und nach 2000 Watt, mit Vergleichswerten), Herkunft der Energie, Eigenversorgung und Eigenverbrauch, Monat für Monat, Heizen, Wohnklima und bewohnte Stunden
+- Übersicht und Auswertung lesen nur Tageswerte, die die [API](https://github.com/Verein-Kleinwohnformen/energiemonitor-api) stündlich rechnet; Faktoren kommen aus `/config/factors`, nie aus dem Code
+- Mess-Schema: welche Messpunkte das Haus hat und was fehlt
 - Messwerte der Sensoren als Diagramm
+- Einträge ändern und Vorrat abgleichen (Nullkauf), Messpunkt-Kennzeichnung M0/M1/M2
 - Daten-Download als XLSX über die [API](https://github.com/Verein-Kleinwohnformen/energiemonitor-api), längere Zeiträume in Monatsdateien
 - Info-Overlay bei jeder Zahl: Quelle, Rechnung, Sicherheit
 - Verwaltung der Zugänge für Superadmins: Konten den Häusern zuordnen (lesen oder bearbeiten), mit Protokoll
 
-**Noch nicht umgesetzt:** Energiebilanz und Verbrauchsstatistik (Übersicht und Auswertung folgen mit den Tageswerten), Spartipps, Plausibilitätschecks mit Warnungen.
+**Noch nicht umgesetzt:** Spartipps, Plausibilitätschecks mit Warnungen.
 
 ## Entwickeln und testen
 
@@ -46,7 +55,8 @@ Technik: Flutter (Dart `^3.5.3`), Firebase Auth, Firestore, Firebase Hosting. Di
 3. Eigene Firebase-Konfiguration erzeugen: `flutterfire configure`. Das ersetzt [`lib/firebase_options.dart`](lib/firebase_options.dart) und die Projekt-ID in `.firebaserc` und `firebase.json`.
 4. Die API-Basis-URL in [`lib/more/export_logic.dart`](lib/more/export_logic.dart) auf deine eigene [API](https://github.com/Verein-Kleinwohnformen/energiemonitor-api) ändern.
 5. Rules und Indizes deployen: `firebase deploy --only firestore`.
-6. Bauen und deployen: `flutter build web`, dann `firebase deploy --only hosting`.
+6. `/config/factors` anlegen (Vorlage mit Quellen in `tool/seed_emulator.mjs`) und in der API die Tageswerte per Cloud Scheduler einplanen. Ohne beides bleiben Übersicht und Auswertung leer.
+7. Bauen und deployen: `flutter build web`, dann `firebase deploy --only hosting`.
 
 ### Sicherheit
 
