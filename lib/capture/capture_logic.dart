@@ -48,6 +48,15 @@ List<Stock> stocksOf(List<ManualEntry> entries) {
 
 /// Hat dieser Eintrag einen Vorgaenger (gleicher Typ, gleicher Messpunkt,
 /// frueheres Kaufdatum)? Ohne Vorgaenger ist "verbraucht" nicht bekannt.
+/// Ob [entry] der juengste Eintrag seines Vorrats (Traeger und Messpunkt) ist.
+/// Nur dieser laesst sich aendern: Bei aelteren Eintraegen stuende der
+/// Verbrauch des Nachfolgers sonst auf alten Zahlen.
+bool isLatestOfStock(ManualEntry entry, List<ManualEntry> all) => !all.any((o) =>
+    !identical(o, entry) &&
+    o.energy.type == entry.energy.type &&
+    o.energy.meteringPoint == entry.energy.meteringPoint &&
+    o.energy.purchaseDate.isAfter(entry.energy.purchaseDate));
+
 bool hasPredecessor(ManualEntry entry, List<ManualEntry> all) => all.any((o) =>
     o.energy.type == entry.energy.type &&
     o.energy.meteringPoint == entry.energy.meteringPoint &&

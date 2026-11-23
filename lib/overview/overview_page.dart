@@ -128,6 +128,7 @@ class OverviewView extends StatelessWidget {
 
     return KwfPage(children: [
       _WeekSentence(summary: s, now: now),
+      if (data.household.isEmpty) const PersonsMissingWarning(),
       _Tiles(summary: s, data: data, now: now, values: values, stand: stand),
       ChartCard(
         title: 'Wofür ging die Energie drauf?',

@@ -184,7 +184,7 @@ Die App liest die Tageswerte eines Zeitraums (`DailyRepository`, 10 Minuten im S
 | Endenergie Wohnen | Netz E1 + Solarstrom selbst genutzt + Brennstoffe in kWh (`manual_kwh_estimated`, sonst Menge mal Heizwert). Diesel und Benzin zählen nicht. |
 | Eigenversorgung | Solarstrom selbst genutzt geteilt durch (Solarstrom selbst genutzt + E1) **(prüfen mit HSLU)** |
 | Eigenverbrauch | Solarstrom selbst genutzt geteilt durch E3 |
-| Personen-Stunden | pro Tag Personen aus "Haushalt" mal 24 h, heute bis `data_until`. Tage ohne Personen zählen für Werte pro Person nicht (weder Energie noch Stunden). |
+| Personen-Stunden | pro Tag Personen aus "Haushalt" mal 24 h, heute bis `data_until`. Vor dem ersten Haushalt-Eintrag gilt dieser auch rückwirkend (die App fragt beim Einrichten mit "gültig ab" heute, die Messdaten reichen aber weiter zurück; Entscheid 23.11.2026, prüfen mit HSLU). Ohne jeden Eintrag gibt es keine Werte pro Person, Übersicht und Auswertung zeigen dann eine Warnung. |
 | Minergie | Summe über Tage mit Personen: g_Strom × (E1 + selbst genutzt) − g_Strom × selbst genutzt × `pv_self_consumption_credit` − g_Strom × E2 × `pv_feed_in_credit` + Σ g_Träger × Brennstoff-kWh, mindestens 0 **(prüfen mit Label-Team)** |
 | 2000 Watt | Summe über Tage mit Personen: E1 × PE_Strom + Σ PE_Träger × Brennstoff-kWh (`primary_energy_factors.*.total`) |
 | Watt pro Person | kWh × 1000 / Personen-Stunden |
@@ -204,4 +204,4 @@ Fehlt ein Faktor, fehlt der Wert, der ihn braucht. Es gibt keinen Ersatzwert im 
 }
 ```
 
-`method` sagt, mit welcher Rechnung der Wert vergleichbar ist (`minergie` oder `2000watt`). Ohne das Feld fehlen die Balken. Der Label-Wert kommt aus "Haushalt" (`label_w_per_person`).
+Beide Werte sind wie das 2000-Watt-Ziel selbst **pro Person** (Dauerleistung Primärenergie pro Einwohnerin und Einwohner, hier der Anteil Wohnen). Die App teilt den eigenen Wert darum ebenfalls durch die Personen-Stunden. `method` sagt, mit welcher Rechnung der Wert vergleichbar ist (`minergie` oder `2000watt`). Ohne das Feld fehlen die Balken. Der Label-Wert kommt aus "Haushalt" (`label_w_per_person`).

@@ -12,6 +12,7 @@
 //   firebase emulators:exec --only firestore,auth --project demo-energiemonitor \
 //     "node tool/run_web_tests.mjs integration_test/form_regression_test.dart"
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kwf_energiemonitor/app/firestore_services.dart';
 import 'package:kwf_energiemonitor/energy.dart';
 import 'package:kwf_energiemonitor/legacy/energy_form_legacy.dart';
 import 'package:kwf_energiemonitor/user.dart';
@@ -383,5 +384,50 @@ void main() {
     expect(find.text('Bitte eine gültige Zahl eingeben'), findsOneWidget);
     expect(find.byType(EnergyForm), findsOneWidget);
     await driver.close(tester);
+  });
+
+  // Aendern (23.11.2026): loescht den Eintrag und speichert die neuen Werte
+  // ueber Energy.addToFirebase(). Ergebnis muss genau dasselbe sein wie ein
+  // direkt erfasster Eintrag mit den neuen Werten.
+  testWidgets('Aendern ergibt dasselbe wie direkt erfassen', (tester) async {
+    Energy entry(double leftover) => Energy(
+          firebaseId: '',
+          typeCounter: 0,
+          description: 'Neue Flasche',
+          purchaseDate: d(2026, 9, 1),
+          usageDate: d(2026, 11, 1),
+          type: EnergyType.propane,
+          purchaseQuantity: 11.5,
+          leftoverQuantity: leftover,
+          meteringPoint: 'M1',
+          usageDateProvisory: true,
+          userId: AppUser().userId,
+          monitorId: kMonitor,
+        );
+    final seeds = [Seed(EnergyType.propane, 'M1', d(2026, 7, 19), d(2026, 9, 30), 11.5, 0.5)];
+    List<String> normalized(List<String> state) {
+      final uid = AppUser().userId!;
+      return state
+          .map((l) => l.replaceAll('"user_id":"$uid"', '"user_id":"<angemeldet>"'))
+          .toList();
+    }
+
+    // A: erfassen mit Rest 4, dann aendern auf Rest 3
+    await prepare(seeds);
+    await entry(4).addToFirebase();
+    final repo = FirestoreManualEntries();
+    final loaded = await repo.load(kMonitor, currentYear: 2026);
+    final saved = loaded.firstWhere((e) => e.energy.purchaseDate == d(2026, 9, 1));
+    await repo.replace(saved, entry(3));
+    final edited = normalized(await readMonitorState(kMonitor));
+
+    // B: direkt mit Rest 3 erfassen
+    await prepare(seeds);
+    await entry(3).addToFirebase();
+    final direct = normalized(await readMonitorState(kMonitor));
+
+    expect(edited, direct);
+    final v = values(entryAt(await readManualEntries(kMonitor), d(2026, 9, 1)));
+    expect(v['consumed_quantity'], 9);
   });
 }

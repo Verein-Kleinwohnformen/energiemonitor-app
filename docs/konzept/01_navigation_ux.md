@@ -136,7 +136,7 @@ Details in `03_Formular_Spezifikation.md`. Aufbau der Seite:
 
 1. **Vorrat-Karten** pro Energieträger, der schon einmal erfasst wurde: "Propangas · 12 kg Rest · letzter Eintrag 19.7.2026". Antippen oder "Nachfüllen" öffnet das Formular vorausgefüllt mit diesem Träger, "Abgleichen" öffnet es als Abgleich ohne Kauf ("Neu dazu" 0, aktueller Rest).
 2. Knopf **"Energieträger erfassen"** (Pille, `gruen`).
-3. **Liste der Einträge**, neueste zuerst, wie heute mit Löschen (Bestätigungsdialog bleibt).
+3. **Liste der Einträge**, neueste zuerst, wie heute mit Löschen (Bestätigungsdialog bleibt). Der jüngste Eintrag jedes Vorrats lässt sich ändern (siehe `03_formular.md`, Abschnitt 4). Vorrat-Karten und Einträge zeigen den Messpunkt als farbiges Tag.
 
 Wer nur Leserechte hat (`monitor_read` ohne `monitor_edit`), sieht Vorrat und Liste, aber keinen Knopf. Text wie heute: "Du kannst bei diesem Monitor keine Daten hinzufügen."
 

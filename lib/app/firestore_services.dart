@@ -41,6 +41,20 @@ class FirestoreManualEntries implements ManualEntriesRepository {
 
   @override
   Future<void> delete(ManualEntry entry) async => entry.energy.delete();
+
+  /// Zuerst loeschen, dann neu speichern: sonst faende energy.dart den alten
+  /// Eintrag als Vorgaenger. Klappt das Speichern nicht, wird der alte
+  /// Eintrag mit seinen Werten wieder angelegt.
+  @override
+  Future<void> replace(ManualEntry old, Energy updated) async {
+    await old.energy.delete();
+    try {
+      await updated.addToFirebase();
+    } catch (_) {
+      await old.energy.addToFirebase();
+      rethrow;
+    }
+  }
 }
 
 /// Liest `consumed_quantity` aus dem ersten Datenpunkt, wie ihn
