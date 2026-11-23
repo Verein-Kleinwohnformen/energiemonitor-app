@@ -25,7 +25,7 @@ Beispielhaus mit Demodaten aus dem Firebase-Emulator (`tool/seed_emulator.mjs`),
 - Mess-Schema: welche Messpunkte das Haus hat und was fehlt
 - Messwerte der Sensoren als Diagramm
 - Einträge ändern und Vorrat abgleichen (Nullkauf), Messpunkt-Kennzeichnung M0/M1/M2
-- Daten-Download als XLSX über die [API](https://github.com/Verein-Kleinwohnformen/energiemonitor-api), längere Zeiträume in Monatsdateien
+- Daten-Download als XLSX über die [API](https://github.com/Verein-Kleinwohnformen/energiemonitor-api), in Dateien von höchstens einem halben Monat (Antwortlimit von Cloud Run)
 - Info-Overlay bei jeder Zahl: Quelle, Rechnung, Sicherheit
 - Verwaltung der Zugänge für Superadmins: Konten den Häusern zuordnen (lesen oder bearbeiten), mit Protokoll
 

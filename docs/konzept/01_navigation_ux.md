@@ -180,7 +180,7 @@ Statt Messpunkt → Sensor → Feld → Laden:
 ### 5.7 Daten herunterladen
 
 - Zeitraum mit Voreinstellungen: Letzter Monat · Kalendermonat wählen · Eigener Zeitraum.
-- Längere Zeiträume als 31 Tage teilt die App selbst in Monatsdateien und lädt sie nacheinander (das API-Limit bleibt).
+- Die App teilt jeden Zeitraum in halbe Monate (1. bis 15., 16. bis Monatsende) und lädt die Dateien nacheinander. Grund: Cloud Run gibt höchstens 32 MB pro Antwort zurück, ein ganzer Monat mit allen Sensoren ist grösser. Das API-Limit von 31 Tagen bleibt.
 - Hinweis klein: "Die Datei schneidet nach UTC-Tagen. Ein Tag beginnt in der Schweiz um 01:00 oder 02:00."
 - Format heute XLSX, später CSV (siehe `04_Umsetzung.md`).
 

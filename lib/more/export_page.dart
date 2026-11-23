@@ -98,7 +98,7 @@ class _ExportPageState extends State<ExportPage> {
       setState(() => _error = 'Du bist nicht mehr angemeldet. Melde dich neu an.');
       return;
     }
-    final parts = splitIntoMonths(_range);
+    final parts = splitForDownload(_range);
     setState(() {
       _busy = true;
       _error = null;
@@ -152,7 +152,7 @@ class _ExportPageState extends State<ExportPage> {
   Widget build(BuildContext context) {
     final monitor = SessionScope.of(context).active;
     final range = _range;
-    final parts = splitIntoMonths(range);
+    final parts = splitForDownload(range);
     Widget option(_Preset p, String title, String subtitle, {VoidCallback? onEdit}) {
       final active = p == _preset;
       return InkWell(
@@ -222,12 +222,12 @@ class _ExportPageState extends State<ExportPage> {
           children: [
             Text(
                 '${_date.format(range.start)} bis ${_date.format(range.end)} · '
-                '${parts.length == 1 ? '1 Datei' : '${parts.length} Dateien, je ein Monat'}',
+                '${parts.length == 1 ? '1 Datei' : '${parts.length} Dateien, je ein halber Monat'}',
                 style: kwfText(14, weight: FontWeight.w600)),
             const SizedBox(height: 4),
             Text(
-                'Länger als 31 Tage teilt die App selbst auf und lädt die Dateien nacheinander. '
-                'Rund 30 MB pro Monat.',
+                'Die App teilt in halbe Monate (1. bis 15., 16. bis Monatsende) und lädt die '
+                'Dateien nacheinander. Rund 15 MB pro Datei.',
                 style: KwfText.meta),
           ],
         ),
