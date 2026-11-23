@@ -18,31 +18,55 @@ import 'energy_kinds.dart';
 
 final _date = DateFormat('d.M.yyyy');
 
-/// Womit das Formular startet (von einer Vorrat-Karte oder leer).
+/// Womit das Formular startet (von einer Vorrat-Karte, leer oder als Abgleich).
 class FormStart {
-  const FormStart({this.entries = const [], this.kind, this.meteringPoint});
+  const FormStart({this.entries = const [], this.kind, this.meteringPoint})
+      : reconcileFrom = null;
+
+  /// Abgleich eines Vorrats: gleiches Formular, "Neu dazu" 0 und Beschreibung
+  /// "Abgleich" sichtbar vorbelegt. Gespeichert wie jeder Eintrag.
+  FormStart.reconcile({required this.entries, required Stock stock})
+      : kind = stock.kind,
+        meteringPoint = stock.meteringPoint,
+        reconcileFrom = stock;
+
   final List<ManualEntry> entries;
   final EnergyKind? kind;
   final String? meteringPoint;
+
+  /// Vorrat, der abgeglichen wird. null bei einem normalen Eintrag.
+  final Stock? reconcileFrom;
+  bool get isReconcile => reconcileFrom != null;
 }
 
 /// Was gespeichert wurde, fuer die Bestaetigung auf der Seite Erfassen.
 class FormResult {
-  const FormResult(this.values);
+  const FormResult(this.values, {this.reconcile = false});
   final FormValues values;
+  final bool reconcile;
 
   String summary(List<ManualEntry> fresh) {
     final v = values;
     final type = v.kind.typeFor(v.unit);
     final unit = unitText(EnergyKind.unitOf(type));
-    final head = '${v.kind.label}, ${formatQuantity(v.added)} $unit, '
-        'Rest ${formatQuantity(v.leftover)} $unit.';
-    final saved = fresh.where((e) =>
-        e.energy.type == type &&
-        e.energy.meteringPoint == v.meteringPoint &&
-        e.energy.purchaseDate == v.purchase);
+    final head = reconcile
+        ? 'Abgleich ${v.kind.label}: noch ${formatQuantity(v.leftover)} $unit.'
+        : '${v.kind.label}, ${formatQuantity(v.added)} $unit, '
+            'Rest ${formatQuantity(v.leftover)} $unit.';
+    final saved = fresh
+        .where((e) =>
+            e.energy.type == type &&
+            e.energy.meteringPoint == v.meteringPoint &&
+            e.energy.purchaseDate == v.purchase)
+        .toList();
     if (saved.isEmpty) return '$head Gespeichert.';
-    final entry = saved.first;
+    // Am selben Tag kann es mehrere Eintraege geben: den mit diesen Werten nehmen.
+    final entry = saved.firstWhere(
+        (e) =>
+            e.energy.purchaseQuantity == v.added &&
+            e.energy.leftoverQuantity == v.leftover &&
+            e.energy.description == v.description,
+        orElse: () => saved.first);
     if (!hasPredecessor(entry, fresh) || entry.storedConsumed == null) {
       return '$head Den Verbrauch rechnen wir ab dem nächsten Eintrag.';
     }
@@ -81,6 +105,8 @@ class _EnergyFormPageState extends State<EnergyFormPage> {
   bool _initialized = false;
 
   List<ManualEntry> get _entries => widget.start?.entries ?? const [];
+  Stock? get _reconcile => widget.start?.reconcileFrom;
+  bool get _isReconcile => _reconcile != null;
 
   @override
   void didChangeDependencies() {
@@ -91,7 +117,20 @@ class _EnergyFormPageState extends State<EnergyFormPage> {
     // Kaufdatum heute, als Kalendertag um Mitternacht wie der Datumswaehler.
     _purchase = DateTime(now.year, now.month, now.day);
     final start = widget.start;
-    if (start?.kind != null) _selectKind(start!.kind!, meteringPoint: start.meteringPoint);
+    final reconcile = _reconcile;
+    if (reconcile != null) {
+      // Abgleich: Traeger, Einheit und Messpunkt vom Vorrat, "Neu dazu" 0 und
+      // Beschreibung "Abgleich". Sichtbar in den normalen Feldern, aenderbar.
+      final r = reconcilePrefillFor(reconcile);
+      _unit = r.unit;
+      _unitTouched = true;
+      _description.text = r.description;
+      _descTouched = true;
+      _added.text = r.added;
+      _selectKind(r.kind, meteringPoint: r.meteringPoint);
+    } else if (start?.kind != null) {
+      _selectKind(start!.kind!, meteringPoint: start.meteringPoint);
+    }
     _added.addListener(_updateSuggestion);
     _leftover.addListener(_updateSuggestion);
   }
@@ -134,7 +173,8 @@ class _EnergyFormPageState extends State<EnergyFormPage> {
 
   void _updateSuggestion() {
     if (_usageTouched || _purchase == null) return;
-    final suggestion = suggestUsageDate(
+    final suggest = _isReconcile ? suggestReconcileUsageDate : suggestUsageDate;
+    final suggestion = suggest(
       perDay: dailyUsage(_stock),
       purchase: _purchase!,
       added: parseQuantity(_added.text),
@@ -154,7 +194,7 @@ class _EnergyFormPageState extends State<EnergyFormPage> {
       initialDate: current ?? _purchase ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      helpText: purchase ? 'Hinzugefügt am' : 'Aufgebraucht etwa',
+      helpText: purchase ? _purchaseLabel : 'Aufgebraucht etwa',
     );
     if (picked == null) return;
     setState(() {
@@ -194,7 +234,7 @@ class _EnergyFormPageState extends State<EnergyFormPage> {
           .entries
           .add(values.toEnergy(userId: session.uid, monitorId: session.active?.id));
       if (!mounted) return;
-      Navigator.of(context).pop(FormResult(values));
+      Navigator.of(context).pop(FormResult(values, reconcile: _isReconcile));
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
@@ -203,13 +243,17 @@ class _EnergyFormPageState extends State<EnergyFormPage> {
     }
   }
 
+  String get _purchaseLabel => _isReconcile ? 'Abgeglichen am' : 'Hinzugefügt am';
+
   @override
   Widget build(BuildContext context) {
     final unitLabel = _unit == null ? '' : unitText(_unit!);
+    final reconcile = _reconcile;
+    final dateWarning = reconcile == null ? null : reconcileDateWarning(reconcile, _purchase);
     return Scaffold(
       backgroundColor: KwfColors.weiss,
       appBar: AppBar(
-        title: const Text('Energieträger erfassen'),
+        title: Text(_isReconcile ? 'Vorrat abgleichen' : 'Energieträger erfassen'),
         leading: IconButton(
           tooltip: 'Zurück',
           icon: const Icon(Icons.arrow_back),
@@ -221,6 +265,16 @@ class _EnergyFormPageState extends State<EnergyFormPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           children: [
+            if (reconcile != null) ...[
+              KwfHint(
+                  'Trag ein, wie viel jetzt noch da ist. Neu dazu bleibt 0, wenn du nichts '
+                  'gekauft hast. So sehen wir, wie viel seit dem letzten Eintrag weg ist. '
+                  'Beim letzten Eintrag am ${_date.format(reconcile.date)} waren es '
+                  '${formatQuantity(reconcile.amount)} '
+                  '${unitText(EnergyKind.unitOf(reconcile.energy.type))}.',
+                  icon: Icons.inventory_2_outlined),
+              const SizedBox(height: 12),
+            ],
             const _Step(1, 'Was?'),
             const SizedBox(height: 12),
             FormField<EnergyKind>(
@@ -308,8 +362,11 @@ class _EnergyFormPageState extends State<EnergyFormPage> {
             ),
             const SizedBox(height: 8),
             Text(
-                'Noch übrig: was vor dem Nachfüllen noch da ist. Bei Gas die alte Flasche '
-                'wägen und die Tara abziehen (steht auf der Flasche).',
+                _isReconcile
+                    ? 'Noch übrig: was jetzt noch da ist. Bei Gas die Flasche wägen und die '
+                        'Tara abziehen (steht auf der Flasche).'
+                    : 'Noch übrig: was vor dem Nachfüllen noch da ist. Bei Gas die alte '
+                        'Flasche wägen und die Tara abziehen (steht auf der Flasche).',
                 style: KwfText.help),
             const SizedBox(height: 18),
             const _Step(3, 'Wann?'),
@@ -320,7 +377,7 @@ class _EnergyFormPageState extends State<EnergyFormPage> {
                 Expanded(
                   child: _DateField(
                     key: const ValueKey('form-purchase'),
-                    label: 'Hinzugefügt am',
+                    label: _purchaseLabel,
                     value: _purchase,
                     onTap: () => _pickDate(purchase: true),
                     validator: () => validatePurchaseDate(_purchase),
@@ -345,6 +402,10 @@ class _EnergyFormPageState extends State<EnergyFormPage> {
                     : 'Schätze, bis wann diese Menge reicht. Mit dem nächsten Eintrag '
                         'ersetzen wir die Schätzung durch das echte Datum.',
                 style: KwfText.help),
+            if (dateWarning != null) ...[
+              const SizedBox(height: 10),
+              KwfHint(dateWarning, icon: Icons.warning_amber_rounded),
+            ],
             const SizedBox(height: 18),
             const _Label('Beschreibung'),
             const SizedBox(height: 6),

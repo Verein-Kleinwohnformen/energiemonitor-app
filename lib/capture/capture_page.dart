@@ -1,4 +1,5 @@
-// Seite Erfassen: Vorrat, Formular-Knopf, Erinnerungen, Liste der Eintraege.
+// Seite Erfassen: Vorrat (nachfuellen, abgleichen), Formular-Knopf,
+// Erinnerungen, Liste der Eintraege.
 //
 // Grundregel: Diese Seite sieht im Studienmodus und im normalen Modus genau
 // gleich aus. Sie haengt darum nicht vom Studienmodus ab (Golden-Test prueft
@@ -53,14 +54,16 @@ class _CapturePageState extends State<CapturePage> {
     });
   }
 
-  Future<void> _openForm(List<ManualEntry> entries, {Stock? from}) async {
+  Future<void> _openForm(List<ManualEntry> entries, {Stock? from, bool reconcile = false}) async {
     final result = await context.push<FormResult>(
       Routes.captureForm,
-      extra: FormStart(
-        entries: entries,
-        kind: from?.kind,
-        meteringPoint: from?.meteringPoint,
-      ),
+      extra: reconcile && from != null
+          ? FormStart.reconcile(entries: entries, stock: from)
+          : FormStart(
+              entries: entries,
+              kind: from?.kind,
+              meteringPoint: from?.meteringPoint,
+            ),
     );
     if (result == null || !mounted) return;
     _reload();
@@ -92,6 +95,8 @@ class _CapturePageState extends State<CapturePage> {
           canEdit: SessionScope.of(context).canEdit,
           now: AppServices.of(context).clock.now(),
           onAdd: (from) => _openForm(snap.data ?? const [], from: from),
+          onReconcile: (stock) =>
+              _openForm(snap.data ?? const [], from: stock, reconcile: true),
           onDelete: (entry) async {
             await AppServices.of(context).entries.delete(entry);
             if (!context.mounted) return;
@@ -114,12 +119,16 @@ class CaptureView extends StatelessWidget {
     required this.now,
     required this.onAdd,
     required this.onDelete,
+    this.onReconcile,
   });
 
   final List<ManualEntry> entries;
   final bool canEdit;
   final DateTime now;
   final void Function(Stock? from) onAdd;
+
+  /// Vorrat abgleichen ("Nullkauf"). Ohne Bearbeitungsrecht nicht angeboten.
+  final void Function(Stock stock)? onReconcile;
   final Future<void> Function(ManualEntry entry) onDelete;
 
   @override
@@ -138,7 +147,10 @@ class CaptureView extends StatelessWidget {
       if (stocks.isNotEmpty) ...[
         const KwfKicker('Dein Vorrat'),
         _StockGrid(
-            stocks: stocks, canEdit: canEdit, onTap: canEdit ? (s) => onAdd(s) : null),
+            stocks: stocks,
+            canEdit: canEdit,
+            onTap: canEdit ? (s) => onAdd(s) : null,
+            onReconcile: canEdit ? onReconcile : null),
       ],
       for (final r in reminders) KwfHint(r.text, icon: Icons.schedule),
       _EntryList(entries: entries, canEdit: canEdit, onDelete: onDelete),
@@ -147,10 +159,12 @@ class CaptureView extends StatelessWidget {
 }
 
 class _StockGrid extends StatelessWidget {
-  const _StockGrid({required this.stocks, required this.canEdit, required this.onTap});
+  const _StockGrid(
+      {required this.stocks, required this.canEdit, required this.onTap, this.onReconcile});
   final List<Stock> stocks;
   final bool canEdit;
   final void Function(Stock)? onTap;
+  final void Function(Stock)? onReconcile;
 
   @override
   Widget build(BuildContext context) {
@@ -160,11 +174,17 @@ class _StockGrid extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(child: StockCard(stock: stocks[i], canEdit: canEdit, onTap: onTap)),
+            Expanded(
+                child: StockCard(
+                    stock: stocks[i], canEdit: canEdit, onTap: onTap, onReconcile: onReconcile)),
             const SizedBox(width: 10),
             Expanded(
               child: i + 1 < stocks.length
-                  ? StockCard(stock: stocks[i + 1], canEdit: canEdit, onTap: onTap)
+                  ? StockCard(
+                      stock: stocks[i + 1],
+                      canEdit: canEdit,
+                      onTap: onTap,
+                      onReconcile: onReconcile)
                   : const SizedBox(),
             ),
           ],
@@ -183,14 +203,17 @@ class _StockGrid extends StatelessWidget {
 }
 
 class StockCard extends StatelessWidget {
-  const StockCard({super.key, required this.stock, required this.canEdit, this.onTap});
+  const StockCard(
+      {super.key, required this.stock, required this.canEdit, this.onTap, this.onReconcile});
   final Stock stock;
   final bool canEdit;
   final void Function(Stock)? onTap;
+  final void Function(Stock)? onReconcile;
 
   @override
   Widget build(BuildContext context) {
     final kind = stock.kind;
+    final id = '${stock.energy.type.name}-${stock.meteringPoint}';
     return KwfCard(
       padding: const EdgeInsets.fromLTRB(14, 14, 2, 14),
       onTap: onTap == null ? null : () => onTap!(stock),
@@ -243,13 +266,56 @@ class StockCard extends StatelessWidget {
                         color: KwfColors.textSekundaer,
                         height: 15 / 11)),
                 if (canEdit) ...[
-                  const SizedBox(height: 6),
-                  Text('Nachfüllen', style: KwfText.link),
+                  const SizedBox(height: 2),
+                  Wrap(
+                    spacing: 16,
+                    children: [
+                      _CardLink('Nachfüllen',
+                          key: ValueKey('stock-refill-$id'),
+                          semanticLabel: '${kind.label} nachfüllen',
+                          onTap: onTap == null ? null : () => onTap!(stock)),
+                      if (onReconcile != null)
+                        _CardLink('Abgleichen',
+                            key: ValueKey('stock-reconcile-$id'),
+                            semanticLabel: '${kind.label} abgleichen',
+                            onTap: () => onReconcile!(stock)),
+                    ],
+                  ),
                 ],
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Link in einer Vorrat-Karte, mit eigener Trefferflaeche (mind. 40 px hoch)
+/// und eigenem Eintrag fuer Screenreader.
+class _CardLink extends StatelessWidget {
+  const _CardLink(this.text, {super.key, required this.semanticLabel, required this.onTap});
+  final String text;
+  final String semanticLabel;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      button: true,
+      label: semanticLabel,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 40),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            widthFactor: 1,
+            child: Text(text, style: KwfText.link),
+          ),
+        ),
       ),
     );
   }

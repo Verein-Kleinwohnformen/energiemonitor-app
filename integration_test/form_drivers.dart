@@ -10,7 +10,9 @@ import 'package:kwf_energiemonitor/app/firestore_services.dart';
 import 'package:kwf_energiemonitor/app/services.dart';
 import 'package:kwf_energiemonitor/app/session.dart';
 import 'package:kwf_energiemonitor/app/session_scope.dart';
+import 'package:kwf_energiemonitor/capture/capture_logic.dart';
 import 'package:kwf_energiemonitor/capture/energy_form_page.dart';
+import 'package:kwf_energiemonitor/energy.dart';
 import 'package:kwf_energiemonitor/capture/energy_kinds.dart';
 import 'package:kwf_energiemonitor/legacy/energy_form_legacy.dart';
 import 'package:kwf_energiemonitor/theme/kwf_theme.dart';
@@ -25,7 +27,7 @@ class FormInput {
     this.unit,
     this.mp,
     this.description,
-    required this.added,
+    this.added,
     required this.leftover,
     this.purchase,
     this.usage,
@@ -43,7 +45,9 @@ class FormInput {
 
   /// null = nicht anfassen (Vorbelegung des neuen Formulars uebernehmen).
   final String? description;
-  final String added;
+
+  /// null = nicht anfassen (Vorbelegung beim Abgleich im neuen Formular).
+  final String? added;
   final String leftover;
   final DateTime? purchase;
   final DateTime? usage;
@@ -119,7 +123,7 @@ class LegacyFormDriver implements FormDriver {
     await tester.enterText(
         find.widgetWithText(TextFormField, 'Beschreibung'), input.description!);
     await tester.enterText(
-        find.widgetWithText(TextFormField, 'Hinzugefügte Menge'), input.added);
+        find.widgetWithText(TextFormField, 'Hinzugefügte Menge'), input.added!);
     await tester.enterText(
         find.widgetWithText(TextFormField, 'Übrige Menge'), input.leftover);
     if (input.unit != null && input.unit != 'Kg') {
@@ -168,6 +172,10 @@ class NewFormDriver implements FormDriver {
   NewFormDriver({required this.monitorId});
   final String monitorId;
 
+  /// Wenn gesetzt, oeffnet sich das Formular als Abgleich dieses Vorrats
+  /// (Knopf "Abgleichen" auf der Vorrat-Karte).
+  ({EnergyType type, String mp})? reconcile;
+
   @override
   String get name => 'neues Formular';
 
@@ -202,7 +210,7 @@ class NewFormDriver implements FormDriver {
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
           home: Scaffold(
             body: RouteHost(
-              builder: (_) => EnergyFormPage(start: FormStart(entries: all)),
+              builder: (_) => EnergyFormPage(start: _start(all)),
             ),
           ),
         ),
@@ -212,6 +220,14 @@ class NewFormDriver implements FormDriver {
     await pumpUntil(tester, () => find.byType(EnergyFormPage).evaluate().isNotEmpty,
         what: 'neues Formular offen');
     await settle(tester);
+  }
+
+  FormStart _start(List<ManualEntry> all) {
+    final r = reconcile;
+    if (r == null) return FormStart(entries: all);
+    final stock = stocksOf(all)
+        .firstWhere((s) => s.energy.type == r.type && s.meteringPoint == r.mp);
+    return FormStart.reconcile(entries: all, stock: stock);
   }
 
   Future<void> _tapKey(WidgetTester tester, String key) async {
@@ -249,7 +265,7 @@ class NewFormDriver implements FormDriver {
     if (input.unit == 'Ster') await _tapKey(tester, 'form-unit-Ster');
     if (input.unit == 'Kg' && input.type == 'Holz') await _tapKey(tester, 'form-unit-Kg');
     if (input.mp != null) await _tapKey(tester, 'form-mp-${input.mp}');
-    await _enter(tester, 'form-added', input.added);
+    if (input.added != null) await _enter(tester, 'form-added', input.added!);
     await _enter(tester, 'form-leftover', input.leftover);
     if (input.purchase != null) await _pickDate(tester, 'form-purchase', input.purchase!);
     if (input.usage != null) await _pickDate(tester, 'form-usage', input.usage!);

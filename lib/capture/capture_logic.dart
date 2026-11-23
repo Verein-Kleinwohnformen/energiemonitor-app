@@ -2,6 +2,8 @@
 //
 // Alles hier stammt nur aus den eigenen Eintraegen und zeigt keinen
 // gemessenen Verbrauch. Darum ist es auch im Studienmodus sichtbar.
+import 'package:intl/intl.dart';
+
 import '../app/services.dart';
 import '../util/dates.dart';
 import '../energy.dart';
@@ -224,6 +226,71 @@ Prefill prefillFor(EnergyKind kind, List<ManualEntry> entries, {String? metering
     description: last.energy.description,
   );
 }
+
+// ---------------------------------------------------------------------------
+// Abgleich: Vorrat nachfuehren ohne Kauf ("Nullkauf")
+// ---------------------------------------------------------------------------
+
+/// Beschreibung, mit der das Formular einen Abgleich vorbelegt.
+const kReconcileDescription = 'Abgleich';
+
+/// Vorbelegung fuer einen Abgleich. Fachlich ein normaler Eintrag mit
+/// "Neu dazu" 0 und dem aktuellen Rest; alles sichtbar und aenderbar.
+/// "Noch uebrig" bleibt leer: sonst wuerde unbemerkt Verbrauch 0 gespeichert.
+class ReconcilePrefill {
+  const ReconcilePrefill({
+    required this.kind,
+    required this.unit,
+    required this.meteringPoint,
+    required this.lastAmount,
+    required this.lastDate,
+  });
+  final EnergyKind kind;
+
+  /// Einheit des Vorrats ('Kg', 'Ster', 'Liter'), nicht die des letzten
+  /// Eintrags des Traegers: Holz kann in kg und in Ster nebeneinander liegen.
+  final String unit;
+  final String meteringPoint;
+  final double lastAmount;
+  final DateTime lastDate;
+  String get added => '0';
+  String get description => kReconcileDescription;
+}
+
+ReconcilePrefill reconcilePrefillFor(Stock stock) => ReconcilePrefill(
+      kind: stock.kind,
+      unit: EnergyKind.unitOf(stock.energy.type),
+      meteringPoint: stock.meteringPoint,
+      lastAmount: stock.amount,
+      lastDate: stock.date,
+    );
+
+/// Hinweis, wenn das Datum des Abgleichs nicht nach dem letzten Eintrag
+/// liegt. Den Vorgaenger sucht energy.dart nur mit einem frueheren Datum;
+/// am selben Tag bliebe der Verbrauch 0. Blockiert das Speichern nicht.
+String? reconcileDateWarning(Stock stock, DateTime? purchase) {
+  if (purchase == null || purchase.isAfter(stock.date)) return null;
+  return 'Dein letzter Eintrag ist vom ${_dmy.format(stock.date)}. Ein Abgleich am selben '
+      'Tag oder davor zählt nicht als neuer Stand, der Verbrauch bliebe 0. Wähl ein '
+      'späteres Datum oder lösch den letzten Eintrag und trag ihn mit dem richtigen Rest neu ein.';
+}
+
+/// Vorschlag "aufgebraucht etwa" beim Abgleich: wie sonst aus dem bisherigen
+/// Verbrauch. Ist der Vorrat leer (neu dazu 0, Rest 0), ist er am Tag des
+/// Abgleichs aufgebraucht.
+DateTime? suggestReconcileUsageDate({
+  required double? perDay,
+  required DateTime purchase,
+  required double? added,
+  required double? leftover,
+}) {
+  final s = suggestUsageDate(perDay: perDay, purchase: purchase, added: added, leftover: leftover);
+  if (s != null) return s;
+  if (added == 0 && leftover == 0) return purchase;
+  return null;
+}
+
+final _dmy = DateFormat('d.M.yyyy');
 
 /// Zahl fuer die Anzeige: 12 statt 12.0, sonst wie eingegeben mit Punkt.
 String formatQuantity(double v) {

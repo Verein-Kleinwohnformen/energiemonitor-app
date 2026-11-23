@@ -69,7 +69,7 @@ Der Hausname in der Kopfzeile mit Pfeil ▾ ist eine Abkürzung zum Monitorwechs
 ```
 
 - **Erfassen** ist die Startseite und sieht **genau gleich aus wie im normalen Modus**: gleiches Formular, gleiche Vorrat-Karten, gleiche Liste, gleiche Erinnerungen. Kein Banner, keine andere Beschriftung. Wer zwischen zwei Monitoren wechselt, findet sich sofort zurecht, und die Daten für die Studie entstehen in beiden Fällen auf demselben Weg.
-- **Mehr** enthält nur: Systemstatus (ohne Messwerte, nur online/offline und Zeitpunkt), Haushalt, Monitor wechseln, Konto, "Über die Energiestudie", Über die App.
+- **Mehr** enthält nur: Systemstatus (ohne Messwerte, nur online/offline und Zeitpunkt) mit dem Mess-Schema, Haushalt, Monitor wechseln, Konto, "Über die Energiestudie", Über die App.
 - Der Hinweis zur Studie ("Damit die Messung unverfälscht bleibt, zeigt die App während der Studie keine Auswertungen. Deinen persönlichen Bericht bekommst du nach dem Messjahr.") erscheint einmal beim ersten Öffnen eines Studienmonitors als Dialog und danach dauerhaft unter "Mehr > Über die Energiestudie", nicht auf der Erfassen-Seite.
 - Die Status-Pille bleibt, weil Bewohnende sehen sollen, dass ihr Monitor läuft, und uns melden können, wenn nicht.
 - Ausgeblendet: Übersicht, Auswertung, Messwerte, Download, Hinweise mit Zahlen.
@@ -124,7 +124,7 @@ Abschnitte in dieser Reihenfolge:
 
 Details in `03_Formular_Spezifikation.md`. Aufbau der Seite:
 
-1. **Vorrat-Karten** pro Energieträger, der schon einmal erfasst wurde: "Propangas · 12 kg Rest · letzter Eintrag 19.7.2026". Antippen öffnet das Formular vorausgefüllt mit diesem Träger.
+1. **Vorrat-Karten** pro Energieträger, der schon einmal erfasst wurde: "Propangas · 12 kg Rest · letzter Eintrag 19.7.2026". Antippen oder "Nachfüllen" öffnet das Formular vorausgefüllt mit diesem Träger, "Abgleichen" öffnet es als Abgleich ohne Kauf ("Neu dazu" 0, aktueller Rest).
 2. Knopf **"Energieträger erfassen"** (Pille, `gruen`).
 3. **Liste der Einträge**, neueste zuerst, wie heute mit Löschen (Bestätigungsdialog bleibt).
 
@@ -147,7 +147,16 @@ Liste mit Gruppen:
 - Liste der automatischen Messpunkte mit Klartext, Kürzel und Ampel mit Wort: ● online / ● verzögert / ● offline.
 - Schwellen: online, wenn die letzten Daten jünger als 90 min sind (Upload stündlich plus Reserve), verzögert bis 6 h, danach offline.
 - Manuelle Messpunkte (M0 bis M2) haben keine Ampel, sondern "letzter Eintrag".
+- Darunter der Einstieg **Mess-Schema** (5.5a).
 - Unten: "Fehlt etwas? Schreib uns: energiemonitor@kleinwohnformen.ch"
+
+### 5.5a Mess-Schema
+
+Eigener Bildschirm unter "Mehr > Systemstatus > Mess-Schema" (`/mehr/mess-schema`), umgesetzt 23.11.2026. Er zeigt, welche Messpunkte das Haus nach dem Messkonzept v1.0 (Minergie-Modul Monitoring) hat, ob Daten ankommen und was noch fehlt. Keine Messwerte, darum auch im Studienmodus sichtbar.
+
+- **Gruppen** wie auf der Folie "Was gemessen wird": Energie über die Systemgrenze (E1, E2, E3, M1, M2, M0 nur mit Einträgen), im Haus mit gestrichelter Systemgrenze: Verbraucher (I1, I2, I3, A1), Wohnkomfort am Lieblingsort (K1 bis K4), Wasser (D1). Unbekannte Messpunkte unter "Weitere".
+- **Kachel pro Messpunkt** in der Farbe des Messkonzepts mit Kürzel, Name und Zustand als Punkt und Wort: online, verzögert, offline (Schwellen wie 5.5), "keine Daten seit …" (über 30 Tage), "Einträge · letzter …" (M0 bis M2), "nicht gemessen" (weiss, gestrichelt). K1 bis K4 zählen auch, wenn sie als Feld unter K0 ankommen ("über K0").
+- **Prüfung mit Warnung**, abgeleitet aus den Daten, ohne Angabe pro Haus: Heizwärme mit I2 oder Einträgen für Heizen (M2), Warmwasser mit I1 oder Einträgen für Warmwasser (M1), nur gemischte Einträge (M0) zählen als teilweise; Wohnklima braucht K1 bis K4. Ein Hinweis sagt, dass eine zweite, nicht angeschlossene Quelle nicht erkannt wird.
 
 ### 5.6 Messwerte (einfachere Rohdaten)
 

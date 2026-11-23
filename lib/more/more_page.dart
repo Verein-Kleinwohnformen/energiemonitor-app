@@ -190,6 +190,12 @@ class SystemStatusSection extends StatelessWidget {
             ),
             for (final p in status.automatic) _PointRow(point: p, now: now),
             if (status.manual.isNotEmpty) _ManualRow(points: status.manual),
+            KwfNavRow(
+              icon: Icons.account_tree_outlined,
+              title: 'Mess-Schema',
+              subtitle: 'Welche Messpunkte dein Haus hat und was noch fehlt',
+              onTap: () => context.push(Routes.measurementSchema),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
               child: Text(
