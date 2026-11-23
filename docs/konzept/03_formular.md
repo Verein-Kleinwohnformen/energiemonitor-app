@@ -86,3 +86,45 @@ Festgehalten, damit sie nicht verloren gehen. Jede Änderung hier ändert die St
 - **Benzin und Diesel** gehören meist zur Mobilität. Ob sie in der Studie gezählt werden, ist offen.
 - **ID-Erzeugung:** `_generateUuid` ist Zeitstempel plus Messpunkt plus Typ, keine echte UUID. Unkritisch, aber bei der Umsetzung durch das `uuid`-Paket ersetzen, ohne bestehende Dokumente zu ändern.
 - **Suche nach dem Vorgänger** liest alle Einträge des Jahres. Bei vielen Einträgen langsam, fachlich korrekt.
+
+## 6. Vorrat verwerfen und umbuchen (geplant)
+
+**Problem:** Heute gibt es nur zwei Wege, den Vorrat zu senken: einen Eintrag mit kleinerem Rest oder Löschen. Beides passt nicht, wenn Brennstoff das System verlässt, ohne verbrannt zu werden (Gasflasche zurückgegeben oder verkauft, Holz verschenkt, Pellets nass geworden) oder wenn er neu für einen anderen Zweck eingesetzt wird (Gasflasche vom Warmwasser zum Kochen, weil das Warmwasser jetzt elektrisch erzeugt wird). Ein kleinerer Rest zählt die Menge als Verbrauch, und die Tageswerte zeigen dann einen Verbrauch, den es nie gab. Löschen verfälscht die Vorgeschichte.
+
+**Bedienung:** Auf jeder Vorrat-Karte ein dritter Link **"Verwerfen"** (neben "Nachfüllen" und "Abgleichen"). Er öffnet das Formular als "Vorrat verwerfen":
+
+| Feld | Inhalt |
+|---|---|
+| Was? | Träger, Einheit und Messpunkt vom Vorrat, nicht änderbar |
+| Noch übrig vorher | Rest unmittelbar vor dem Verwerfen (gewogen, geschätzt). Pflicht, sonst ist der Verbrauch bis heute unbekannt. Vorbelegt mit dem Vorrat der Karte, Hinweis "Was ist noch da, bevor etwas weggeht?" |
+| Verworfen | Menge, die das System verlässt. Knopf "Alles" setzt sie auf "Noch übrig vorher". Muss grösser als 0 und höchstens "Noch übrig vorher" sein |
+| Grund | Auswahl "Zurückgegeben oder verkauft", "Weitergegeben", "Unbrauchbar", "Für anderen Zweck eingesetzt" |
+| Neuer Zweck | Nur beim Grund "Für anderen Zweck eingesetzt": Messpunkt (Warmwasser, Heizen, Gemischt), ohne den bisherigen |
+| Wann? | Datum, Standard heute |
+| Beschreibung | Vorbelegt mit dem Grund, änderbar |
+
+Bestätigung wie beim Speichern: "Propangas M1 Warmwasser: 8 kg verworfen, Rest 0 kg. Seit dem letzten Eintrag verbraucht: 2 kg."
+
+**Gespeicherte Dokumente:** Das Formular bleibt fachlich 1:1, `lib/energy.dart` bleibt unverändert. Verwerfen speichert über einen eigenen Weg (neben `Energy.addToFirebase()`) ein Dokument im **gleichen Format** in `/devices/{id}/manual/{year}/data/{uuid}` mit:
+
+- `added_quantity` 0, `leftover_quantity` = "Noch übrig vorher" minus "Verworfen";
+- `consumed_quantity` = Vorrat des Vorgängers minus "Noch übrig vorher" (nicht minus Rest), mindestens 0, mit derselben Suche nach dem Vorgänger wie `energy.dart`;
+- neu in `values`: `discarded_quantity`;
+- neu in `metadata`: `entry_kind: "discard"`, `discard_reason`, beim Umbuchen `transferred_to` (Messpunkt);
+- Nachführung des Vorgängers (`estimated_usage_date`, `usage_date_provisory`) wie bei jedem Eintrag.
+
+Beim Grund "Für anderen Zweck eingesetzt" entsteht im selben Batch ein zweites Dokument beim neuen Messpunkt: ein normaler Eintrag mit `added_quantity` = verworfene Menge, `leftover_quantity` = bisheriger Rest dort (aus der Vorrat-Karte, 0 wenn es keinen gibt), `metadata.entry_kind: "transfer_in"` und `transferred_from`. So stimmen beide Vorräte, und die Vorgeschichte bleibt beim alten Zweck.
+
+**Tageswerte (API):** Die Verteilung nutzt nur `consumed_quantity`, verworfene Mengen zählen also nie als Verbrauch. Zusätzlich nötig: Ist der Vorrat nach dem letzten Eintrag 0 (`added_quantity` + `leftover_quantity` = 0), gibt es keinen laufenden Zeitraum mehr; heute wird der Verbrauch nach dem letzten Eintrag mit dem Satz des letzten Zeitraums weitergeschätzt, auch wenn nichts mehr da ist.
+
+**Anzeige:** Liste: Verwerfen-Einträge mit eigenem Symbol und Text "verworfen 8 kg (zurückgegeben)". Vorrat-Karte mit Rest 0 nach einem Verwerfen wird eingeklappt ("Vorrat aufgelöst am 14.11.2026"), "Nachfüllen" holt sie zurück. Der Export enthält `discarded_quantity` und `entry_kind` als eigene Spalten.
+
+**Ändern und Löschen:** Ein Verwerfen-Eintrag ist der jüngste Eintrag seines Vorrats und lässt sich wie andere ändern (löschen und neu speichern). Beim Umbuchen werden beide Dokumente zusammen gelöscht oder geändert.
+
+**Tests:** Unit-Test der Rechnung (Rest vorher, verworfen, Vorgänger, Vorrat 0); Integrationstest im Emulator: Verwerfen, Umbuchen, danach normaler Eintrag ergibt denselben Verbrauch wie ohne Verwerfen; Formular-Regressionstest unverändert grün; API-Test: kein laufender Zeitraum bei Vorrat 0.
+
+**Offen:**
+
+- Neue Felder (`discarded_quantity`, `entry_kind`) ändern das Studienformat. TODO(prüfen): mit der HSLU klären, ob das so in den Export und die Auswertung darf.
+- TODO(prüfen): Soll "Noch übrig vorher" Pflicht sein, oder genügt beim Verwerfen von allem ein Häkchen "Verbrauch bis heute unbekannt"?
+- TODO(prüfen): Umbuchen vergangener Zeiträume (alle Einträge eines Vorrats nachträglich einem anderen Zweck zuordnen) bleibt ein Admin-Schritt im Backend, kein App-Knopf.
