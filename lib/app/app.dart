@@ -11,6 +11,7 @@ import '../more/about_page.dart';
 import '../more/export_page.dart';
 import '../more/household_page.dart';
 import '../more/measurements_page.dart';
+import '../more/schema_page.dart';
 import '../more/method_page.dart';
 import '../more/monitor_switch_page.dart';
 import '../more/more_page.dart';
@@ -73,6 +74,10 @@ GoRouter buildRouter(AppSession session) {
           path: Routes.measurements,
           parentNavigatorKey: _rootKey,
           builder: (_, __) => const MeasurementsPage()),
+      GoRoute(
+          path: Routes.measurementSchema,
+          parentNavigatorKey: _rootKey,
+          builder: (_, __) => const SchemaPage()),
       GoRoute(
           path: Routes.export,
           parentNavigatorKey: _rootKey,

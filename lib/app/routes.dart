@@ -11,6 +11,10 @@ abstract final class Routes {
   static const monitorSwitch = '/mehr/monitor';
   static const household = '/mehr/haushalt';
   static const measurements = '/mehr/messwerte';
+
+  /// Mess-Schema: welche Messpunkte es gibt und ob Daten ankommen. Zeigt keine
+  /// Werte und bleibt darum auch im Studienmodus sichtbar.
+  static const measurementSchema = '/mehr/mess-schema';
   static const export = '/mehr/download';
   static const study = '/mehr/energiestudie';
   static const about = '/mehr/ueber';

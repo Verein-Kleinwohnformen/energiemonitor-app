@@ -103,10 +103,16 @@ Die Texte stehen nicht im Code verstreut, sondern in einer Datei `lib/info_texts
 - Rechnung: 24 h zeigt jeden Wert, 7 und 30 Tage zeigen Stundenmittel.
 - Sicherheit: gemessen.
 
+**Mess-Schema**
+- Was: Welche Messpunkte dein Haus nach dem Messkonzept hat und ob Daten ankommen.
+- Woher: Liste der Messpunkte deines Monitors und deine Einträge (Messkonzept v1.0 nach dem Minergie-Modul Monitoring).
+- Rechnung: Ein Messpunkt zählt, wenn in den letzten 30 Tagen Daten kamen. Heizwärme ist abgedeckt mit der Heizung I2 oder mit Einträgen für Heizen (M2), Warmwasser mit I1 oder mit Einträgen für Warmwasser (M1). Fürs Wohnklima braucht es Innentemperatur, Aussentemperatur, Luftfeuchte und CO2.
+- Sicherheit: gemessen. Ein Gerät, das nicht am Monitor angeschlossen ist, sieht die Prüfung nicht.
+
 **Vorrat und "verbraucht"**
 - Was: Was beim letzten Eintrag noch da war und wie viel seit dem Eintrag davor weg ist.
 - Woher: Nur aus deinen Einträgen.
-- Rechnung: Vorrat = neu dazu + Rest. Verbraucht = Vorrat des vorherigen Eintrags minus Rest des neuen.
+- Rechnung: Vorrat = neu dazu + Rest. Verbraucht = Vorrat des vorherigen Eintrags minus Rest des neuen. Abgleich: ein Eintrag mit neu dazu 0 und dem aktuellen Rest. So siehst du den Verbrauch, auch wenn du nicht nachfüllst.
 - Sicherheit: so genau wie deine Angaben. Gas am besten wägen.
 
 

@@ -61,13 +61,14 @@ Dazu wie heute: `metering_points/{mp}` mit `last_seen` und `sensor_types: app_fo
 | Fehlermeldungen erst nach "Hinzufügen" | Gleiche Meldungen, zusätzlich direkt beim Verlassen eines Feldes | |
 | Knopf "Hinzufügen" unten rechts | Knopf "Eintrag speichern" breit unten, fest im Bild | Erreichbar mit dem Daumen |
 | Snackbar "Eintrag hinzugefügt!" | Bestätigung mit Zusammenfassung: "Propangas, 11.5 kg, Rest 0.5 kg. Seit dem letzten Eintrag verbraucht: 11.5 kg." | Rückmeldung, dass der Verbrauch berechnet wurde |
+| Kein eigener Weg, den Vorrat ohne Kauf nachzuführen | Link **"Abgleichen"** auf jeder Vorrat-Karte (neben "Nachfüllen"). Er öffnet dasselbe Formular als "Vorrat abgleichen": Träger, Einheit und Messpunkt vom Vorrat, "Neu dazu" 0 und Beschreibung "Abgleich" sichtbar vorbelegt und änderbar, "Noch übrig" leer. Gespeichert wird ein normaler Eintrag ("Nullkauf"). Liegt das Datum nicht nach dem letzten Eintrag, erscheint ein Hinweis (siehe 5). | Bewohnende halten den Vorrat aktuell, ohne nachzufüllen; so ist der Verbrauch seit dem letzten Eintrag bekannt und die Tageswerte werden genauer (umgesetzt 23.11.2026) |
 
 Ausdrücklich nicht geändert: keine neuen Pflichtfelder, keine neuen Energieträger, keine neuen Messpunkte, kein anderes Datenformat. Vorschläge dafür stehen unten und sind ein separater Entscheid.
 
 ## 4. Liste der Einträge
 
 - Wie heute: neueste zuerst, Löschen mit Bestätigungsdialog ("Eintrag löschen", "Abbrechen", "Löschen").
-- Neu oben die **Vorrat-Karten** pro Energieträger und Messpunkt: aktueller Rest (letzter `leftover_quantity` + `added_quantity`), Datum des letzten Eintrags, Verbrauch seit dem Vorletzten. Antippen öffnet das Formular vorausgefüllt.
+- Neu oben die **Vorrat-Karten** pro Energieträger und Messpunkt: aktueller Rest (letzter `leftover_quantity` + `added_quantity`), Datum des letzten Eintrags, Verbrauch seit dem Vorletzten. Antippen oder "Nachfüllen" öffnet das Formular vorausgefüllt, "Abgleichen" öffnet es als Abgleich (siehe 3).
 - Neu ein **Hinweis**, wenn ein Eintrag länger her ist als der bisherige Abstand zwischen zwei Einträgen dieses Trägers.
 - Vorrat-Karten, Liste und Hinweis sind in beiden Modi gleich. Sie stammen nur aus den eigenen Einträgen und zeigen keinen gemessenen Verbrauch.
 - Jede Vorrat-Karte und der Wert "verbraucht" haben das Info-Symbol mit dem Text "Vorrat und verbraucht" aus `05_Datenherkunft_und_Infotexte.md`, Abschnitt 4.
@@ -77,7 +78,9 @@ Ausdrücklich nicht geändert: keine neuen Pflichtfelder, keine neuen Energietr�
 Festgehalten, damit sie nicht verloren gehen. Jede Änderung hier ändert die Studiendaten und braucht einen Entscheid mit der HSLU.
 
 - **Messpunkt-Bedeutung:** In der App heissen M1 "Warmwasser" und M2 "Heizwärme" (Nutzung). Im Messkonzept v1.0 heissen M1 "Gas in Flaschen" und M2 "Brennholz oder Pellets" (Träger). Die App speichert den Energieträger zusätzlich in `energy_type`, die Information geht also nicht verloren, aber die Kürzel bedeuten in App und Messkonzept nicht dasselbe **(offen)**.
-- **Flaschenwechsel ohne Kauf:** Die Auswertung Langzeittest empfiehlt, jeden Flaschenwechsel mit gewogenem Rest zu erfassen. Das geht heute schon (Menge = volle Flasche, Rest = gewogener Rest der alten), ist aber nicht so beschriftet.
+- **Flaschenwechsel ohne Kauf:** Die Auswertung Langzeittest empfiehlt, jeden Flaschenwechsel mit gewogenem Rest zu erfassen. Das geht heute schon (Menge = volle Flasche, Rest = gewogener Rest der alten), ist aber nicht so beschriftet. Seit dem 23.11.2026 gibt es dafür den Abgleich (Abschnitt 3).
+- **Abgleich am selben Tag:** Das Kaufdatum ist ein Kalendertag um Mitternacht. `energy.dart` sucht den Vorgänger nur mit einem früheren Datum; ein Abgleich am selben Tag wie der letzte Eintrag ergibt darum "verbraucht" 0. Das Formular zeigt dann einen Hinweis, blockiert aber nicht (fachlich 1:1). Der Regressionstest dokumentiert den Fall.
+- **Abgleich setzt das "aufgebraucht"-Datum des Vorgängers:** Wie bei jedem Eintrag setzt `energy.dart` beim Vorgänger `estimated_usage_date` auf das Datum des Abgleichs und `usage_date_provisory` auf false, obwohl der Vorrat nicht aufgebraucht ist. **(offen, mit der HSLU klären)** Die Tageswerte der API nutzen nur `consumed_quantity` und sind nicht betroffen.
 - **Benzin und Diesel** gehören meist zur Mobilität. Ob sie in der Studie gezählt werden, ist offen.
 - **ID-Erzeugung:** `_generateUuid` ist Zeitstempel plus Messpunkt plus Typ, keine echte UUID. Unkritisch, aber bei der Umsetzung durch das `uuid`-Paket ersetzen, ohne bestehende Dokumente zu ändern.
 - **Suche nach dem Vorgänger** liest alle Einträge des Jahres. Bei vielen Einträgen langsam, fachlich korrekt.

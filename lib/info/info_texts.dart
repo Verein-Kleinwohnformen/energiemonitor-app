@@ -215,8 +215,22 @@ abstract final class InfoTexts {
     what: 'Was beim letzten Eintrag noch da war und wie viel seit dem Eintrag davor weg ist.',
     source: 'Nur aus deinen Einträgen.',
     method: 'Vorrat = neu dazu + Rest. Verbraucht = Vorrat des vorherigen Eintrags minus '
-        'Rest des neuen.',
+        'Rest des neuen. Abgleich: ein Eintrag mit neu dazu 0 und dem aktuellen Rest. So '
+        'siehst du den Verbrauch, auch wenn du nicht nachfüllst.',
     certainty: 'So genau wie deine Angaben. Gas am besten wägen.',
+  );
+
+  static const schema = InfoText(
+    title: 'Mess-Schema',
+    what: 'Welche Messpunkte dein Haus nach dem Messkonzept hat und ob Daten ankommen.',
+    source: 'Liste der Messpunkte deines Monitors und deine Einträge (Messkonzept v1.0 '
+        'nach dem Minergie-Modul Monitoring).',
+    method: 'Ein Messpunkt zählt, wenn in den letzten 30 Tagen Daten kamen. Heizwärme ist '
+        'abgedeckt mit der Heizung I2 oder mit Einträgen für Heizen (M2), Warmwasser mit I1 '
+        'oder mit Einträgen für Warmwasser (M1). Fürs Wohnklima braucht es Innentemperatur, '
+        'Aussentemperatur, Luftfeuchte und CO2.',
+    certainty: 'Gemessen. Ein Gerät, das nicht am Monitor angeschlossen ist, sieht die '
+        'Prüfung nicht.',
   );
 
   /// Alle Texte, fuer Tests und eine spaetere Pflege-Ansicht.
@@ -236,5 +250,6 @@ abstract final class InfoTexts {
     co2Heatmap,
     measurements,
     stock,
+    schema,
   ];
 }

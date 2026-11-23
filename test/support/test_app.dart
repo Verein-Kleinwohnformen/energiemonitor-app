@@ -73,14 +73,15 @@ class FakeEntries implements ManualEntriesRepository {
   Future<void> delete(ManualEntry entry) async => items.remove(entry);
 }
 
-MeteringPoint point(String id, DateTime lastSeen, {List<String> sensors = const []}) =>
+MeteringPoint point(String id, DateTime lastSeen,
+        {List<String> sensors = const [], List<String> fields = const []}) =>
     MeteringPoint(
       deviceId: 'demo',
       meteringPointId: id,
       firstSeen: 0,
       lastSeen: lastSeen.millisecondsSinceEpoch,
       sensorTypes: sensors,
-      valueFields: const [],
+      valueFields: fields,
     );
 
 List<MeteringPoint> samplePoints() => [

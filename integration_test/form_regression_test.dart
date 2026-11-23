@@ -41,8 +41,12 @@ class Scenario {
       this.expectSaved = true,
       this.expectError,
       this.expectErrorNew,
+      this.reconcileNew,
       this.check});
   final String name;
+
+  /// Neues Formular als Abgleich dieses Vorrats oeffnen ("Nullkauf").
+  final ({EnergyType type, String mp})? reconcileNew;
   final FormInput input;
 
   /// Eingaben im neuen Formular, wenn sie sich bewusst unterscheiden
@@ -72,6 +76,48 @@ Map<String, dynamic> values(Map<String, dynamic> entry) =>
     Map<String, dynamic>.from(((entry['data_points'] as List).first as Map)['values'] as Map);
 
 final scenarios = <Scenario>[
+  // Abgleich ("Nullkauf"): im alten Formular von Hand mit Menge 0, im neuen
+  // ueber den Knopf "Abgleichen" mit Vorbelegung. Gleiches Dokument.
+  Scenario(
+    'Abgleich: neu dazu 0, Rest gewogen',
+    FormInput(type: 'Propangas', mp: 'M1', description: 'Abgleich',
+        added: '0', leftover: '4.5', purchase: d(2026, 9, 1), usage: d(2026, 10, 1)),
+    inputNew: FormInput(leftover: '4.5', purchase: d(2026, 9, 1), usage: d(2026, 10, 1)),
+    reconcileNew: (type: EnergyType.propane, mp: 'M1'),
+    seeds: [Seed(EnergyType.propane, 'M1', d(2026, 7, 19), d(2026, 9, 30), 11.5, 0.5)],
+    check: (e) {
+      final v = values(entryAt(e, d(2026, 9, 1)));
+      expect(v['added_quantity'], 0);
+      expect(v['consumed_quantity'], 7.5);
+      final prev = entryAt(e, d(2026, 7, 19))['metadata'] as Map;
+      expect(prev['usage_date_provisory'], false);
+    },
+  ),
+  Scenario(
+    'Abgleich: Vorrat leer',
+    FormInput(type: 'Holzpellets', mp: 'M2', description: 'Abgleich',
+        added: '0', leftover: '0', purchase: d(2026, 11, 2), usage: d(2026, 11, 2)),
+    inputNew: FormInput(leftover: '0', purchase: d(2026, 11, 2), usage: d(2026, 11, 2)),
+    reconcileNew: (type: EnergyType.pellets, mp: 'M2'),
+    seeds: [Seed(EnergyType.pellets, 'M2', d(2026, 10, 1), d(2026, 12, 1), 30, 5)],
+    check: (e) => expect(values(entryAt(e, d(2026, 11, 2)))['consumed_quantity'], 35),
+  ),
+  // Dokumentiert die Grenze: am selben Tag wie der letzte Eintrag findet
+  // energy.dart keinen Vorgaenger, verbraucht bleibt 0 (das Formular warnt).
+  Scenario(
+    'Abgleich am selben Tag: verbraucht 0, Vorgaenger bleibt',
+    FormInput(type: 'Propangas', mp: 'M1', description: 'Abgleich',
+        added: '0', leftover: '4', purchase: d(2026, 7, 19), usage: d(2026, 9, 1)),
+    inputNew: FormInput(leftover: '4', purchase: d(2026, 7, 19), usage: d(2026, 9, 1)),
+    reconcileNew: (type: EnergyType.propane, mp: 'M1'),
+    seeds: [Seed(EnergyType.propane, 'M1', d(2026, 7, 19), d(2026, 9, 30), 11.5, 0.5)],
+    check: (e) {
+      final same = e.where((x) =>
+          (x['metadata'] as Map)['purchase_date'] == d(2026, 7, 19).millisecondsSinceEpoch);
+      final reconcile = same.firstWhere((x) => values(x)['added_quantity'] == 0);
+      expect(values(reconcile)['consumed_quantity'], 0);
+    },
+  ),
   Scenario(
     'erster Eintrag Propangas',
     FormInput(type: 'Propangas', mp: 'M1', description: 'Neue Flasche',
@@ -265,8 +311,9 @@ void main() {
             .toList();
         final before = normalized(await readMonitorState(kMonitor));
 
-        await driver.open(tester);
         final isNew = driver is NewFormDriver;
+        if (driver is NewFormDriver) driver.reconcile = scenario.reconcileNew;
+        await driver.open(tester);
         await driver.fill(tester, isNew ? scenario.inputNew ?? scenario.input : scenario.input);
         await driver.submit(tester);
 
