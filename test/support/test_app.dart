@@ -11,11 +11,17 @@ import 'package:kwf_energiemonitor/admin/access.dart';
 import 'package:kwf_energiemonitor/app/services.dart';
 import 'package:kwf_energiemonitor/app/session.dart';
 import 'package:kwf_energiemonitor/app/session_scope.dart';
+import 'package:kwf_energiemonitor/daily/daily_values.dart';
+import 'package:kwf_energiemonitor/daily/factors.dart';
 import 'package:kwf_energiemonitor/energy.dart';
 import 'package:kwf_energiemonitor/household/household.dart';
 import 'package:kwf_energiemonitor/metering_point.dart';
 import 'package:kwf_energiemonitor/monitor.dart';
 import 'package:kwf_energiemonitor/theme/kwf_theme.dart';
+
+import 'sample_daily.dart';
+
+export 'sample_daily.dart';
 
 /// Golden-Bilder werden unter Linux erzeugt und verglichen (CI), weil die
 /// Schrift unter Windows und macOS minimal anders gerendert wird. Lokal
@@ -154,6 +160,8 @@ Widget wrap(
   StatusRepository? status,
   HouseholdRepository? household,
   AdminRepository? admin,
+  DailyRepository? daily,
+  FactorsRepository? factors,
 }) {
   return SessionScope(
     session: session,
@@ -161,6 +169,8 @@ Widget wrap(
       entries: entries ?? FakeEntries(),
       status: status ?? FakeStatus(),
       household: household ?? FakeHousehold(),
+      daily: daily ?? FakeDaily(sampleDays(DateTime(2025, 11, 1), kNow, partialUntil: kNow)),
+      factors: factors ?? FakeFactors(),
       admin: admin,
       clock: FixedClock(kNow),
       child: MaterialApp(

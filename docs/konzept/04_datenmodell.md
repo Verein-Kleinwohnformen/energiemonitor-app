@@ -173,3 +173,35 @@ Winter: Im November erkennt die Ofensignatur fast jeden Morgen um 06:00 ein Feue
 | `/config/factors` | angemeldet | niemand aus der App |
 
 `/config/factors` pflegt das Team in der Firebase Console: `{"heating_values": {"pellets": {"value": …, "unit": "kWh/kg", "source": "…"}}, "primary_energy_factors": {…}}`. Ohne Heizwert bleibt `manual_kwh_estimated` leer.
+
+## Umsetzung Etappe 3: Übersicht und Auswertung
+
+Die App liest die Tageswerte eines Zeitraums (`DailyRepository`, 10 Minuten im Speicher) und `/config/factors` (`FactorsRepository`, einmal pro Start) und fasst sie in `lib/daily/summary.dart` zusammen. Aus Rohdaten rechnet sie nichts.
+
+| Grösse | Rechnung |
+|---|---|
+| Solarstrom selbst genutzt | pro Tag E3 minus E2, mindestens 0 |
+| Endenergie Wohnen | Netz E1 + Solarstrom selbst genutzt + Brennstoffe in kWh (`manual_kwh_estimated`, sonst Menge mal Heizwert). Diesel und Benzin zählen nicht. |
+| Eigenversorgung | Solarstrom selbst genutzt geteilt durch (Solarstrom selbst genutzt + E1) **(prüfen mit HSLU)** |
+| Eigenverbrauch | Solarstrom selbst genutzt geteilt durch E3 |
+| Personen-Stunden | pro Tag Personen aus "Haushalt" mal 24 h, heute bis `data_until`. Tage ohne Personen zählen für Werte pro Person nicht (weder Energie noch Stunden). |
+| Minergie | Summe über Tage mit Personen: g_Strom × (E1 + selbst genutzt) − g_Strom × selbst genutzt × `pv_self_consumption_credit` − g_Strom × E2 × `pv_feed_in_credit` + Σ g_Träger × Brennstoff-kWh, mindestens 0 **(prüfen mit Label-Team)** |
+| 2000 Watt | Summe über Tage mit Personen: E1 × PE_Strom + Σ PE_Träger × Brennstoff-kWh (`primary_energy_factors.*.total`) |
+| Watt pro Person | kWh × 1000 / Personen-Stunden |
+| Heizen | I2 + Brennstoff fürs Heizen (`by_metering_point.M2` × Heizwert); Solaranteil = I2 × Eigenversorgung des Tages |
+| Klima | Median der Tagesmediane an bewohnten Tagen (sonst aller Tage); Bereich und Komfortstunden aus `hourly_climate.t_in` |
+| Heatmap | Median von `hourly_climate.co2` pro Wochentag und Stunde, ab 28 Tagen |
+| Lückenhaft | `availability` von E1 oder E3 unter 0.9; der Tag zählt, wird aber ausgewiesen |
+
+Fehlt ein Faktor, fehlt der Wert, der ihn braucht. Es gibt keinen Ersatzwert im Code.
+
+**Neues Feld `benchmarks` in `/config/factors`** (Vergleichswerte für Watt pro Person):
+
+```json
+"benchmarks": {
+  "target_2000w": {"label": "2000-Watt-Ziel", "value": 420, "method": "2000watt", "source": "…"},
+  "ch_today":     {"label": "Schweiz heute",  "value": 1300, "method": "2000watt", "source": "…"}
+}
+```
+
+`method` sagt, mit welcher Rechnung der Wert vergleichbar ist (`minergie` oder `2000watt`). Ohne das Feld fehlen die Balken. Der Label-Wert kommt aus "Haushalt" (`label_w_per_person`).

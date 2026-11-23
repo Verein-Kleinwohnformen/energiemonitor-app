@@ -33,21 +33,21 @@ Die Texte stehen nicht im Code verstreut, sondern in einer Datei `lib/info_texts
 
 **Eigenversorgung Strom**
 - Was: Welcher Teil eures Stroms nicht aus dem Netz kam.
-- Woher: Netzbezug E1 und Stromverbrauch (Heizung I2, Kleinverbraucher I3, Monitor A1).
-- Rechnung: 1 minus Netzbezug geteilt durch Verbrauch. Batterieverluste sind im Verbrauch nicht enthalten.
+- Woher: Netzbezug E1, Solarstrom E3 und Einspeisung E2 vom Victron.
+- Rechnung: Selbst genutzter Solarstrom (E3 minus Einspeisung E2) geteilt durch selbst genutzten Solarstrom plus Netzbezug. Batterieverluste zählen mit. Eigenverbrauch: selbst genutzter Teil des Solarstroms. (Geändert 23.11.2026: Rechnung über den Bezug, weil der Victron bei voller Batterie mehr aus dem Netz holen kann, als die Verbraucher brauchen. Prüfen mit HSLU.)
 - Sicherheit: berechnet aus Messwerten.
 
 **Wohnklima**
 - Was: Temperatur, Feuchte und CO2 an eurem Lieblingsort.
 - Woher: Netatmo-Station innen (für die Studie gültiger Sensor).
-- Rechnung: Median an bewohnten Tagen. Bereich = 5. bis 95. Perzentil. Gut: 20 bis 24 °C, 30 bis 60 % Feuchte, CO2 unter 1'000 ppm.
+- Rechnung: Median an bewohnten Tagen. Bereich = 5. bis 95. Perzentil der Stundenwerte. Behaglich: 20 bis 26 °C (Entscheid 23.11.2026), 30 bis 60 % Feuchte, CO2 unter 1'000 ppm.
 - Sicherheit: gemessen, alle 10 Minuten.
 
 **Wofür ging die Energie drauf? (Tagesbalken)**
 - Was: Energie pro Tag nach Energieträger.
 - Woher: Sonne E3 und Netz E1 vom Victron, Pellets und Gas aus deinen Einträgen.
 - Rechnung: Sonne und Netz gemessen. Pellets verteilen wir auf die Abende, an denen die Innentemperatur schnell stieg und keine elektrische Heizung lief (Ofensignatur). Gas verteilen wir gleichmässig auf die Tage, an denen jemand zu Hause war.
-- Sicherheit: Strom gemessen, Pellets und Gas geschätzt (gestrichelt). Die Schätzung wird genauer, sobald du den nächsten Eintrag machst.
+- Sicherheit: Strom gemessen, Pellets und Gas geschätzt (hellere Fläche mit Rand). Die Schätzung wird genauer, sobald du den nächsten Eintrag machst.
 
 **Pellets / Holz, geschätzt**
 - Was: Wann ihr wie viel verbrannt habt.
@@ -62,14 +62,14 @@ Die Texte stehen nicht im Code verstreut, sondern in einer Datei `lib/info_texts
 - Sicherheit: geschätzt.
 
 **Watt pro Person**
-- Was: Eure Energie als Dauerleistung pro Person, vergleichbar mit dem Energielabel und dem 2000-Watt-Ziel.
-- Woher: Netzstrom E1, Brennstoffe aus deinen Einträgen, Personen aus "Haushalt".
-- Rechnung: Primärenergie (Netzstrom und Brennstoffe mal Primärenergiefaktor nach KBOB, {faktoren}) geteilt durch die Stunden im Zeitraum und die Personen. Eigener Solarstrom zählt nicht (Systemgrenze wie Minergie und KWF-Energielabel).
-- Sicherheit: berechnet, Brennstoffe geschätzt. Vergleichswerte: KWF-Energielabel (Schweiz heute 1'300 W, Ziel 420 W, Bereich Wohnen).
+- Was: Eure Energie als Dauerleistung pro Person, zweimal gerechnet: nach Minergie (vergleichbar mit dem Energielabel) und nach der 2000-Watt-Methodik (vergleichbar mit dem 2000-Watt-Ziel und der Schweiz heute).
+- Woher: Strom vom Victron (Netz E1, Sonne E3, Einspeisung E2), Brennstoffe aus deinen Einträgen, Personen aus "Haushalt".
+- Rechnung: Minergie: Strom und Brennstoffe mal Gewichtungsfaktor ({gewichtung}), selbst genutzter Solarstrom ganz und eingespeister zu {einspeisung} gutgeschrieben. 2000 Watt: Netzstrom und Brennstoffe mal Primärenergiefaktor nach KBOB ({faktoren}), eigener Solarstrom zählt nicht. Beides geteilt durch die Stunden im Zeitraum und die Personen.
+- Sicherheit: berechnet, Brennstoffe geschätzt. Die beiden Methoden ergeben verschiedene Zahlen, darum steht jeder Wert neben den Vergleichswerten seiner Methode.
 
 **Energiequellen-Mix**
 - Was: Woher die verbrauchte Energie kam.
-- Woher: Sonne E3, Netz E1, Brennstoffe aus deinen Einträgen.
+- Woher: Sonne E3 (ohne Einspeisung E2), Netz E1, Brennstoffe aus deinen Einträgen.
 - Rechnung: Anteile an der Endenergie in kWh. {nicht_berechenbar} ist nicht enthalten, weil es dafür erst einen Eintrag gibt. Für einen Verbrauch braucht es zwei.
 - Sicherheit: Strom gemessen, Brennstoffe geschätzt.
 

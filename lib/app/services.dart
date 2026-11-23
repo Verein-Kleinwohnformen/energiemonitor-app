@@ -9,6 +9,8 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 import '../admin/access.dart';
+import '../daily/daily_values.dart';
+import '../daily/factors.dart';
 import '../energy.dart';
 import '../household/household.dart';
 import '../metering_point.dart';
@@ -69,6 +71,8 @@ class AppServices extends InheritedWidget {
     required this.entries,
     required this.status,
     required this.household,
+    this.daily = const NoDaily(),
+    this.factors = const NoFactors(),
     this.admin,
     this.clock = const SystemClock(),
     required super.child,
@@ -77,6 +81,10 @@ class AppServices extends InheritedWidget {
   final ManualEntriesRepository entries;
   final StatusRepository status;
   final HouseholdRepository household;
+
+  /// Tageswerte (Etappe 2) und Faktoren fuer Uebersicht und Auswertung.
+  final DailyRepository daily;
+  final FactorsRepository factors;
 
   /// Zugriffsverwaltung, nur fuer Superadmins genutzt.
   final AdminRepository? admin;
@@ -93,8 +101,23 @@ class AppServices extends InheritedWidget {
       entries != old.entries ||
       status != old.status ||
       household != old.household ||
+      daily != old.daily ||
+      factors != old.factors ||
       admin != old.admin ||
       clock != old.clock;
+}
+
+/// Ohne Tageswerte (Tests, die sie nicht brauchen).
+class NoDaily implements DailyRepository {
+  const NoDaily();
+  @override
+  Future<List<DailyValues>> load(String monitorId, DateTime from, DateTime to) async => const [];
+}
+
+class NoFactors implements FactorsRepository {
+  const NoFactors();
+  @override
+  Future<EnergyFactors> load() async => EnergyFactors.empty;
 }
 
 /// Teilt einen Stream unter mehreren Zuhoerern und gibt neuen Zuhoerern den

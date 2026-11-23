@@ -12,14 +12,19 @@ import 'package:kwf_energiemonitor/capture/energy_form_page.dart';
 
 import '../support/test_app.dart';
 
-Future<void> _app(WidgetTester tester, SessionData data, {String? goTo}) async {
-  await setPhoneSize(tester, size: const Size(390, 844));
+Future<void> _app(WidgetTester tester, SessionData data,
+    {String? goTo, bool daily = false, double height = 844}) async {
+  await setPhoneSize(tester, size: Size(390, height));
   await tester.pumpWidget(EnergiemonitorApp(
     session: AppSession.fixed(data),
     services: (child) => AppServices(
       entries: FakeEntries(),
       status: FakeStatus(),
       household: FakeHousehold(),
+      daily: daily
+          ? FakeDaily(sampleDays(DateTime(2025, 11, 1), kNow, partialUntil: kNow))
+          : const NoDaily(),
+      factors: FakeFactors(),
       clock: FixedClock(kNow),
       child: child,
     ),
@@ -33,6 +38,25 @@ Future<void> _app(WidgetTester tester, SessionData data, {String? goTo}) async {
 
 void main() {
   setUpAll(loadAppFonts);
+
+  testWidgets('App normal: Uebersicht', skip: !kGoldenFiles, (tester) async {
+    await _app(tester, sessionData(), daily: true, height: 1400);
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/app_uebersicht.png'));
+  });
+
+  testWidgets('App normal: Auswertung Jahr', skip: !kGoldenFiles, (tester) async {
+    await _app(tester, sessionData(), daily: true, height: 3600, goTo: 'Auswertung');
+    await expectLater(
+        find.byType(MaterialApp), matchesGoldenFile('goldens/app_auswertung_jahr.png'));
+  });
+
+  testWidgets('App normal: Auswertung Woche', skip: !kGoldenFiles, (tester) async {
+    await _app(tester, sessionData(), daily: true, height: 3600, goTo: 'Auswertung');
+    await tester.tap(find.text('WOCHE'));
+    await tester.pumpAndSettle();
+    await expectLater(
+        find.byType(MaterialApp), matchesGoldenFile('goldens/app_auswertung_woche.png'));
+  });
 
   testWidgets('App normal: Erfassen', skip: !kGoldenFiles, (tester) async {
     await _app(tester, sessionData(), goTo: 'Erfassen');
