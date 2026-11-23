@@ -193,7 +193,26 @@ void main() {
                 'monitor_read': ['sandbox_monitor', kMon]
               })),
           'mit echtem Monitor');
+      await expectDenied(
+          () => userDoc(uid).set(doc({
+                'monitor_api_keys': {'sandbox_monitor': 'x'}
+              })),
+          'mit Device-Key');
       await expectAllowed(() => userDoc(uid).set(doc()), 'normale Registrierung');
+
+      // Neue App: ohne monitor_api_keys (Download mit Login-Token).
+      final cred2 = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: 'neu2@example.test', password: kPassword);
+      final uid2 = cred2.user!.uid;
+      await expectAllowed(
+          () => userDoc(uid2).set({
+                'user_id': uid2,
+                'email': 'neu2@example.test',
+                'monitor_read': ['sandbox_monitor'],
+                'monitor_edit': ['sandbox_monitor'],
+                'date_created': Timestamp.now(),
+              }),
+          'Registrierung ohne monitor_api_keys');
     });
   });
 

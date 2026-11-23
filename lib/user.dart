@@ -12,7 +12,6 @@ class AppUser {
   int _activeMonitor = 0;
   List<EnergieMonitor> monitorRead = [];
   List<EnergieMonitor> monitorEdit = [];
-  Map<String, String> monitorApiKeys = {};
 
   // Private constructor for Singleton
   AppUser._internal();
@@ -25,7 +24,6 @@ class AppUser {
     _activeMonitor = 0;
     monitorRead = [];
     monitorEdit = [];
-    monitorApiKeys = {};
   }
 
   // Public getters
@@ -43,12 +41,6 @@ class AppUser {
       return false;
     }
     return monitorEditIdList.contains(monitorRead[_activeMonitor].id);
-  }
-
-  // Get API key for the currently active monitor
-  String? get activeMonitorApiKey {
-    if (activeMonitor == null) return null;
-    return monitorApiKeys[activeMonitor!.id];
   }
 
   // Factory constructor to access the singleton instance
@@ -93,14 +85,6 @@ class AppUser {
 
           final editIds = userData['monitor_edit'];
           final readIds = userData['monitor_read'];
-
-          // Load API keys for monitors
-          final apiKeys = userData['monitor_api_keys'] as Map<String, dynamic>?;
-          if (apiKeys != null) {
-            monitorApiKeys = apiKeys.map((k, v) => MapEntry(k, v.toString()));
-          } else {
-            monitorApiKeys = {};
-          }
 
           // Start from an empty list again
           monitorRead = [];
@@ -159,7 +143,6 @@ class AppUser {
         'email': firebaseUser?.email,
         'monitor_read': ['sandbox_monitor'],
         'monitor_edit': ['sandbox_monitor'],
-        'monitor_api_keys': {},
         'date_created': DateTime.now()
       });
 

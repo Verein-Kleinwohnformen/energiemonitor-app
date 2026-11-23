@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -8,7 +9,6 @@ import '../platform/download.dart';
 import '../theme/kwf_theme.dart';
 import '../theme/kwf_tokens.dart';
 import '../theme/kwf_widgets.dart';
-import '../user.dart';
 import 'export_logic.dart';
 import 'sub_page.dart';
 
@@ -91,12 +91,11 @@ class _ExportPageState extends State<ExportPage> {
   Future<void> _download() async {
     final session = SessionScope.read(context);
     final monitor = session.active;
-    // Der Download-Schluessel steht heute im User-Dokument (monitor_api_keys).
-    final key = AppUser().monitorApiKeys[monitor?.id];
     if (monitor == null) return;
-    if (key == null || key.isEmpty) {
-      setState(() => _error = 'Für diesen Monitor ist kein Download freigeschaltet. '
-          'Schreib uns, wenn du die Daten brauchst.');
+    // Die API prueft das Login-Token und erlaubt nur Monitore aus monitor_read.
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() => _error = 'Du bist nicht mehr angemeldet. Melde dich neu an.');
       return;
     }
     final parts = splitIntoMonths(_range);
@@ -110,14 +109,20 @@ class _ExportPageState extends State<ExportPage> {
         setState(() => _progress = 'Datei ${i + 1} von ${parts.length} wird geladen');
         final from = _iso.format(p.start);
         final to = _iso.format(p.end);
+        final token = await user.getIdToken();
         final res = await http.get(
-          Uri.parse('$kApiBaseUrl/export?start_date=$from&end_date=$to'),
-          headers: {'KWF-Device-Key': key},
+          Uri.parse('$kApiBaseUrl/export').replace(queryParameters: {
+            'device_id': monitor.id,
+            'start_date': from,
+            'end_date': to,
+          }),
+          headers: {'Authorization': 'Bearer $token'},
         );
         if (res.statusCode != 200) {
           throw _ExportError(switch (res.statusCode) {
             400 => 'Der Zeitraum wurde nicht akzeptiert.',
-            401 => 'Der Download ist für diesen Monitor nicht freigeschaltet.',
+            401 => 'Deine Anmeldung ist abgelaufen. Melde dich neu an.',
+            403 => 'Du hast keinen Zugriff auf die Daten dieses Monitors.',
             _ => 'Der Server hat nicht geantwortet (Code ${res.statusCode}). Versuch es später.',
           });
         }
