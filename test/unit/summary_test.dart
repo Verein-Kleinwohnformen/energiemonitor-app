@@ -179,7 +179,7 @@ void main() {
     expect(none.wattsMinergie, isNull);
     expect(none.kwhPerPersonDay, isNull);
 
-    // Tage ohne Personen zaehlen weder mit Energie noch mit Stunden.
+    // Vor dem ersten Haushalt-Eintrag gilt dieser auch rueckwirkend.
     final late = [HouseholdEntry(validFrom: DateTime(2026, 11, 17), persons: 1)];
     final week2 = [
       day(DateTime(2026, 11, 16), e: {'E1': 10}),
@@ -190,10 +190,11 @@ void main() {
         days: week2,
         household: late,
         factors: factors);
-    expect(part.daysWithoutPersons, 1);
-    expect(part.personHours, 24);
-    expect(part.kwhPerPersonDay, 2);
-    expect(part.wattsMinergie, closeTo(2 * 2 * 1000 / 24, 1e-9));
+    expect(part.daysWithoutPersons, 0);
+    expect(part.daysPersonsAssumed, 1);
+    expect(part.personHours, 48);
+    expect(part.kwhPerPersonDay, 6);
+    expect(part.wattsMinergie, closeTo(2 * 12 * 1000 / 48, 1e-9));
     expect(part.totalKwh, 12);
   });
 

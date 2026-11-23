@@ -54,16 +54,19 @@ class _CapturePageState extends State<CapturePage> {
     });
   }
 
-  Future<void> _openForm(List<ManualEntry> entries, {Stock? from, bool reconcile = false}) async {
+  Future<void> _openForm(List<ManualEntry> entries,
+      {Stock? from, bool reconcile = false, ManualEntry? edit}) async {
     final result = await context.push<FormResult>(
       Routes.captureForm,
-      extra: reconcile && from != null
-          ? FormStart.reconcile(entries: entries, stock: from)
-          : FormStart(
-              entries: entries,
-              kind: from?.kind,
-              meteringPoint: from?.meteringPoint,
-            ),
+      extra: edit != null
+          ? FormStart.edit(entries: entries, entry: edit)
+          : reconcile && from != null
+              ? FormStart.reconcile(entries: entries, stock: from)
+              : FormStart(
+                  entries: entries,
+                  kind: from?.kind,
+                  meteringPoint: from?.meteringPoint,
+                ),
     );
     if (result == null || !mounted) return;
     _reload();
@@ -97,6 +100,7 @@ class _CapturePageState extends State<CapturePage> {
           onAdd: (from) => _openForm(snap.data ?? const [], from: from),
           onReconcile: (stock) =>
               _openForm(snap.data ?? const [], from: stock, reconcile: true),
+          onEdit: (entry) => _openForm(snap.data ?? const [], edit: entry),
           onDelete: (entry) async {
             await AppServices.of(context).entries.delete(entry);
             if (!context.mounted) return;
@@ -120,6 +124,7 @@ class CaptureView extends StatelessWidget {
     required this.onAdd,
     required this.onDelete,
     this.onReconcile,
+    this.onEdit,
   });
 
   final List<ManualEntry> entries;
@@ -130,6 +135,9 @@ class CaptureView extends StatelessWidget {
   /// Vorrat abgleichen ("Nullkauf"). Ohne Bearbeitungsrecht nicht angeboten.
   final void Function(Stock stock)? onReconcile;
   final Future<void> Function(ManualEntry entry) onDelete;
+
+  /// Eintrag aendern (nur der juengste pro Vorrat).
+  final void Function(ManualEntry entry)? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +161,11 @@ class CaptureView extends StatelessWidget {
             onReconcile: canEdit ? onReconcile : null),
       ],
       for (final r in reminders) KwfHint(r.text, icon: Icons.schedule),
-      _EntryList(entries: entries, canEdit: canEdit, onDelete: onDelete),
+      _EntryList(
+          entries: entries,
+          canEdit: canEdit,
+          onDelete: onDelete,
+          onEdit: canEdit ? onEdit : null),
     ]);
   }
 }
@@ -217,7 +229,8 @@ class StockCard extends StatelessWidget {
     return KwfCard(
       padding: const EdgeInsets.fromLTRB(14, 14, 2, 14),
       onTap: onTap == null ? null : () => onTap!(stock),
-      semanticLabel: '${kind.label}, ${formatQuantity(stock.amount)} ${stock.unit}. Nachfüllen',
+      semanticLabel: '${kind.label}, ${meteringText(stock.meteringPoint)}, '
+          '${formatQuantity(stock.amount)} ${stock.unit}. Nachfüllen',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -236,6 +249,8 @@ class StockCard extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 6),
+          MeteringTag(stock.meteringPoint),
           // Zahl mit Info-Symbol daneben: der Name oben hat so die ganze Breite.
           Row(
             children: [
@@ -258,9 +273,7 @@ class StockCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                    'beim letzten Eintrag\n${meteringText(stock.meteringPoint)} · '
-                    '${_date.format(stock.date)}',
+                Text('beim letzten Eintrag\n${_date.format(stock.date)}',
                     style: kwfText(11,
                         weight: FontWeight.w400,
                         color: KwfColors.textSekundaer,
@@ -322,10 +335,12 @@ class _CardLink extends StatelessWidget {
 }
 
 class _EntryList extends StatelessWidget {
-  const _EntryList({required this.entries, required this.canEdit, required this.onDelete});
+  const _EntryList(
+      {required this.entries, required this.canEdit, required this.onDelete, this.onEdit});
   final List<ManualEntry> entries;
   final bool canEdit;
   final Future<void> Function(ManualEntry) onDelete;
+  final void Function(ManualEntry)? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -348,6 +363,7 @@ class _EntryList extends StatelessWidget {
                   hasPredecessor: hasPredecessor(e, entries),
                   canEdit: canEdit,
                   onDelete: () => onDelete(e),
+                  onEdit: onEdit != null && isLatestOfStock(e, entries) ? () => onEdit!(e) : null,
                 ),
             ],
     );
@@ -361,12 +377,16 @@ class EntryTile extends StatelessWidget {
     required this.hasPredecessor,
     required this.canEdit,
     required this.onDelete,
+    this.onEdit,
   });
 
   final ManualEntry entry;
   final bool hasPredecessor;
   final bool canEdit;
   final Future<void> Function() onDelete;
+
+  /// null: dieser Eintrag laesst sich nicht aendern (nicht der juengste).
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -391,17 +411,25 @@ class EntryTile extends StatelessWidget {
                       style: kwfText(14,
                           weight: FontWeight.w400, color: KwfColors.textSekundaer)),
                 ])),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
+                MeteringTag(e.meteringPoint),
+                const SizedBox(height: 4),
                 Text(e.description, style: kwfText(13, weight: FontWeight.w400)),
                 const SizedBox(height: 2),
                 Text(
                     '+${formatQuantity(e.purchaseQuantity)} $unit, Rest '
-                    '${formatQuantity(e.leftoverQuantity)} $unit, verbraucht $consumed · '
-                    '${e.meteringPoint}',
+                    '${formatQuantity(e.leftoverQuantity)} $unit, verbraucht $consumed',
                     style: KwfText.meta),
               ],
             ),
           ),
+          if (canEdit && onEdit != null)
+            IconButton(
+              key: ValueKey('entry-edit-${e.firebaseId}'),
+              tooltip: 'Eintrag ändern',
+              icon: const Icon(Icons.edit_outlined, color: KwfColors.anthrazit),
+              onPressed: onEdit,
+            ),
           if (canEdit)
             IconButton(
               tooltip: 'Eintrag löschen',

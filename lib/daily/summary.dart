@@ -145,9 +145,13 @@ class PeriodSummary {
   double personHours = 0;
 
   /// Tage mit Daten, aber ohne Personen im Haushalt. Sie zaehlen nicht fuer
-  /// die Werte pro Person (weder Energie noch Stunden).
+  /// die Werte pro Person (weder Energie noch Stunden). Gibt es einen
+  /// Haushalt-Eintrag, gilt der erste auch rueckwirkend (householdFor).
   int daysWithoutPersons = 0;
   bool get householdMissing => daysWithoutPersons > 0;
+
+  /// Tage vor dem ersten Haushalt-Eintrag, gerechnet mit dessen Personen.
+  int daysPersonsAssumed = 0;
   int? personsNow;
 
   /// Endenergie der Tage mit Personen (Grundlage fuer kWh pro Person).
@@ -341,7 +345,8 @@ class PeriodSummary {
       });
 
       // Personen-Stunden: heute nur bis zum letzten Messwert.
-      final persons = householdAt(household, d.date)?.persons;
+      final persons = householdFor(household, d.date)?.persons;
+      if (persons != null && householdAt(household, d.date) == null) s.daysPersonsAssumed++;
       if (persons == null || persons <= 0) {
         s.daysWithoutPersons++;
       } else {
@@ -395,7 +400,7 @@ class PeriodSummary {
     }
 
     // Personen heute
-    s.personsNow = householdAt(household, period.until)?.persons;
+    s.personsNow = householdFor(household, period.until)?.persons;
 
     // TODO(prüfen): Untergrenze 0 und Gutschrift der Einspeisung mit dem Label-Team.
     if (weightingOk && anyPersons) {

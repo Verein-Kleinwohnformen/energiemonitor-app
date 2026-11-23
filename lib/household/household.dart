@@ -66,6 +66,17 @@ class HouseholdEntry {
 
 String _num(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toString();
 
+/// Personen fuer die Auswertung an [day]: der gueltige Eintrag, vor dem
+/// ersten Eintrag der erste. Beim Einrichten fragt die App "Wie viele Personen
+/// wohnen hier?" mit "gueltig ab" heute; die Antwort gilt darum auch fuer die
+/// Tage davor, sonst fehlt fuer alle Messdaten vor dem Einrichten der Nenner.
+/// TODO(prüfen): Rueckwirkende Geltung mit der HSLU.
+HouseholdEntry? householdFor(List<HouseholdEntry> entries, DateTime day) {
+  final at = householdAt(entries, day);
+  if (at != null || entries.isEmpty) return at;
+  return entries.reduce((a, b) => b.validFrom.isBefore(a.validFrom) ? b : a);
+}
+
 /// Der Eintrag, der an [day] gilt: der juengste mit valid_from <= day.
 /// Bei gleichem Datum gewinnt der zuletzt erfasste.
 HouseholdEntry? householdAt(List<HouseholdEntry> entries, DateTime day) {

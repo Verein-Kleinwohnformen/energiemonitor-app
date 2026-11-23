@@ -292,13 +292,10 @@ class _PerPerson extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = summary;
-    if (s.personHours <= 0) {
-      return const ChartEmpty('Personen fehlen: unter Mehr > Haushalt eintragen, dann rechnen '
-          'wir pro Person.');
-    }
+    if (s.personHours <= 0) return const PersonsMissingWarning();
     final missing = s.daysWithoutPersons;
     final mine = withPv ? s.wattsMinergieWithPv : s.wattsMinergie;
-    final label = householdAt(household, s.period.until)?.labelWPerPerson;
+    final label = householdFor(household, s.period.until)?.labelWPerPerson;
     final bench2000 = [for (final b in factors.benchmarks) if (b.method == '2000watt') b];
     final rowsMinergie = <BenchmarkRow>[
       if (mine != null)
@@ -328,6 +325,14 @@ class _PerPerson extends StatelessWidget {
             child: KwfHint('Für $missing ${missing == 1 ? 'Tag' : 'Tage'} fehlen Personen im '
                 'Haushalt. Diese Tage zählen hier nicht mit.'),
           ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(
+              'Geteilt durch ${s.personsNow == 1 ? '1 Person' : '${s.personsNow} Personen'} aus '
+              '"Haushalt"${s.daysPersonsAssumed > 0 ? '. Der erste Eintrag gilt auch für die '
+                  '${s.daysPersonsAssumed} Tage davor' : ''}.',
+              style: KwfText.meta),
+        ),
         Text('Nach Minergie', style: KwfText.kicker),
         Text('Netz und Brennstoffe gewichtet, eigener Solarstrom gutgeschrieben',
             style: KwfText.meta),

@@ -57,5 +57,8 @@ void main() {
     expect(householdAt(entries, DateTime(2026, 1, 1)), isNull);
     expect(householdAt(entries, DateTime(2026, 5, 1))!.summary, '2 Personen, 16 m², Label 90 W');
     expect(householdAt(entries, DateTime(2026, 9, 1))!.persons, 3);
+    // Fuer die Auswertung gilt der erste Eintrag auch rueckwirkend.
+    expect(householdFor(entries, DateTime(2026, 1, 1))!.persons, 2);
+    expect(householdFor(const [], DateTime(2026, 1, 1)), isNull);
   });
 }

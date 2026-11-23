@@ -34,6 +34,11 @@ abstract class ManualEntriesRepository {
   Future<void> add(Energy energy);
 
   Future<void> delete(ManualEntry entry);
+
+  /// Aendert einen Eintrag: loescht [old] und speichert [updated] neu ueber
+  /// Energy.addToFirebase(), damit `consumed_quantity` und die Nachfuehrung
+  /// des Vorgaengers genau wie bei einem neuen Eintrag gerechnet werden.
+  Future<void> replace(ManualEntry old, Energy updated);
 }
 
 abstract class StatusRepository {

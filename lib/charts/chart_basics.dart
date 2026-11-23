@@ -2,7 +2,9 @@
 // Nach dem Design System des Vereins, Abschnitt Energiemonitor-App
 // (Energiemonitor.md, ChartLegend).
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../app/routes.dart';
 import '../daily/summary.dart';
 import '../info/info_overlay.dart';
 import '../info/info_texts.dart';
@@ -182,4 +184,41 @@ class ComfortBadge extends StatelessWidget {
           Text(word, style: kwfText(12, weight: FontWeight.w500)),
         ],
       );
+}
+
+/// Warnung, wenn im Haushalt keine Personen hinterlegt sind: ohne sie gibt
+/// es keine Werte pro Person.
+class PersonsMissingWarning extends StatelessWidget {
+  const PersonsMissingWarning({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('persons-missing'),
+      color: KwfColors.hellblau,
+      padding: const EdgeInsets.fromLTRB(14, 12, 8, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Icon(Icons.warning_amber_rounded, size: 20, color: KwfColors.komfortSchlecht),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                  'Keine Personen hinterlegt. Ohne sie können wir nicht pro Person rechnen. '
+                  'Trag unter Haushalt ein, wie viele Personen hier wohnen.',
+                  style: KwfText.small),
+            ),
+          ]),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => context.push(Routes.household),
+              child: const Text('Zum Haushalt'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

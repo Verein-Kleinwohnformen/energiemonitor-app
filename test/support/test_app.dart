@@ -77,6 +77,15 @@ class FakeEntries implements ManualEntriesRepository {
 
   @override
   Future<void> delete(ManualEntry entry) async => items.remove(entry);
+
+  final replaced = <(ManualEntry, Energy)>[];
+
+  @override
+  Future<void> replace(ManualEntry old, Energy updated) async {
+    replaced.add((old, updated));
+    items.remove(old);
+    added.add(updated);
+  }
 }
 
 MeteringPoint point(String id, DateTime lastSeen,

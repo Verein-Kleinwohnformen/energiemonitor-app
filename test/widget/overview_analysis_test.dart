@@ -131,13 +131,23 @@ void main() {
         household: FakeHousehold([HouseholdEntry(validFrom: DateTime(2026, 11, 1), persons: 2)]),
         days: days);
     await openAnalysis(tester);
-    // Saison (keine 12 Monate Daten), Oktober ohne Personen
+    // Saison (keine 12 Monate Daten), der erste Haushalt-Eintrag gilt rueckwirkend
     expect(find.textContaining('Heizsaison 2026/27'), findsOneWidget);
-    expect(find.textContaining('Für 31 Tage fehlen Personen'), findsOneWidget);
+    expect(find.textContaining('gilt auch für die 31 Tage davor'), findsOneWidget);
+    expect(find.byKey(const ValueKey('persons-missing')), findsNothing);
     await tester.scrollUntilVisible(find.textContaining('keinen Klimasensor'), 300,
         scrollable: pageScroll());
     expect(find.text('Wie behaglich war es?'), findsNothing);
     expect(find.textContaining('Verteilung auf Tage nicht möglich'), findsWidgets);
+  });
+
+  testWidgets('Ohne Personen: Warnung auf Uebersicht und Auswertung', (tester) async {
+    await pumpApp(tester, household: FakeHousehold(<HouseholdEntry>[]),
+        data: sessionData(canEdit: false));
+    expect(find.byKey(const ValueKey('persons-missing')), findsOneWidget);
+    expect(find.textContaining('Keine Personen hinterlegt'), findsOneWidget);
+    await openAnalysis(tester);
+    expect(find.byKey(const ValueKey('persons-missing')), findsOneWidget);
   });
 
   testWidgets('Studienmodus: keine Uebersicht, keine Auswertung', (tester) async {

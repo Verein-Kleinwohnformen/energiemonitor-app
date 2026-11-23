@@ -21,14 +21,24 @@ final _date = DateFormat('d.M.yyyy');
 /// Womit das Formular startet (von einer Vorrat-Karte, leer oder als Abgleich).
 class FormStart {
   const FormStart({this.entries = const [], this.kind, this.meteringPoint})
-      : reconcileFrom = null;
+      : reconcileFrom = null,
+        editing = null;
+
+  /// Eintrag aendern: alle Felder mit den gespeicherten Werten vorbelegt.
+  /// Gespeichert wird ueber ManualEntriesRepository.replace().
+  FormStart.edit({required this.entries, required ManualEntry entry})
+      : kind = EnergyKind.of(entry.energy.type),
+        meteringPoint = entry.energy.meteringPoint,
+        reconcileFrom = null,
+        editing = entry;
 
   /// Abgleich eines Vorrats: gleiches Formular, "Neu dazu" 0 und Beschreibung
   /// "Abgleich" sichtbar vorbelegt. Gespeichert wie jeder Eintrag.
   FormStart.reconcile({required this.entries, required Stock stock})
       : kind = stock.kind,
         meteringPoint = stock.meteringPoint,
-        reconcileFrom = stock;
+        reconcileFrom = stock,
+        editing = null;
 
   final List<ManualEntry> entries;
   final EnergyKind? kind;
@@ -37,13 +47,18 @@ class FormStart {
   /// Vorrat, der abgeglichen wird. null bei einem normalen Eintrag.
   final Stock? reconcileFrom;
   bool get isReconcile => reconcileFrom != null;
+
+  /// Eintrag, der geaendert wird. null bei einem neuen Eintrag.
+  final ManualEntry? editing;
+  bool get isEdit => editing != null;
 }
 
 /// Was gespeichert wurde, fuer die Bestaetigung auf der Seite Erfassen.
 class FormResult {
-  const FormResult(this.values, {this.reconcile = false});
+  const FormResult(this.values, {this.reconcile = false, this.edit = false});
   final FormValues values;
   final bool reconcile;
+  final bool edit;
 
   String summary(List<ManualEntry> fresh) {
     final v = values;
@@ -51,7 +66,7 @@ class FormResult {
     final unit = unitText(EnergyKind.unitOf(type));
     final head = reconcile
         ? 'Abgleich ${v.kind.label}: noch ${formatQuantity(v.leftover)} $unit.'
-        : '${v.kind.label}, ${formatQuantity(v.added)} $unit, '
+        : '${edit ? 'Geändert: ' : ''}${v.kind.label}, ${formatQuantity(v.added)} $unit, '
             'Rest ${formatQuantity(v.leftover)} $unit.';
     final saved = fresh
         .where((e) =>
@@ -104,7 +119,16 @@ class _EnergyFormPageState extends State<EnergyFormPage> {
   bool _saving = false;
   bool _initialized = false;
 
-  List<ManualEntry> get _entries => widget.start?.entries ?? const [];
+  /// Eintraege fuer Vorbelegung und Vorschlag. Beim Aendern ohne den
+  /// geaenderten Eintrag selbst, so wie er nach dem Loeschen fehlt.
+  List<ManualEntry> get _entries {
+    final all = widget.start?.entries ?? const <ManualEntry>[];
+    final e = _editing;
+    return e == null ? all : [for (final x in all) if (!identical(x, e)) x];
+  }
+
+  ManualEntry? get _editing => widget.start?.editing;
+  bool get _isEdit => _editing != null;
   Stock? get _reconcile => widget.start?.reconcileFrom;
   bool get _isReconcile => _reconcile != null;
 
@@ -118,7 +142,23 @@ class _EnergyFormPageState extends State<EnergyFormPage> {
     _purchase = DateTime(now.year, now.month, now.day);
     final start = widget.start;
     final reconcile = _reconcile;
-    if (reconcile != null) {
+    final editing = _editing;
+    if (editing != null) {
+      // Aendern: alle Felder mit den gespeicherten Werten, nichts vorgeschlagen.
+      final e = editing.energy;
+      _unit = EnergyKind.unitOf(e.type);
+      _unitTouched = true;
+      _mp = e.meteringPoint;
+      _mpTouched = true;
+      _description.text = e.description;
+      _descTouched = true;
+      _added.text = formatQuantity(e.purchaseQuantity);
+      _leftover.text = formatQuantity(e.leftoverQuantity);
+      _purchase = DateTime(e.purchaseDate.year, e.purchaseDate.month, e.purchaseDate.day);
+      _usage = DateTime(e.usageDate.year, e.usageDate.month, e.usageDate.day);
+      _usageTouched = true;
+      _selectKind(EnergyKind.of(e.type), meteringPoint: e.meteringPoint);
+    } else if (reconcile != null) {
       // Abgleich: Traeger, Einheit und Messpunkt vom Vorrat, "Neu dazu" 0 und
       // Beschreibung "Abgleich". Sichtbar in den normalen Feldern, aenderbar.
       final r = reconcilePrefillFor(reconcile);
@@ -230,11 +270,17 @@ class _EnergyFormPageState extends State<EnergyFormPage> {
     );
     setState(() => _saving = true);
     try {
-      await AppServices.of(context)
-          .entries
-          .add(values.toEnergy(userId: session.uid, monitorId: session.active?.id));
+      final entries = AppServices.of(context).entries;
+      final energy = values.toEnergy(userId: session.uid, monitorId: session.active?.id);
+      final editing = _editing;
+      if (editing != null) {
+        await entries.replace(editing, energy);
+      } else {
+        await entries.add(energy);
+      }
       if (!mounted) return;
-      Navigator.of(context).pop(FormResult(values, reconcile: _isReconcile));
+      Navigator.of(context)
+          .pop(FormResult(values, reconcile: _isReconcile, edit: editing != null));
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
@@ -253,7 +299,9 @@ class _EnergyFormPageState extends State<EnergyFormPage> {
     return Scaffold(
       backgroundColor: KwfColors.weiss,
       appBar: AppBar(
-        title: Text(_isReconcile ? 'Vorrat abgleichen' : 'Energieträger erfassen'),
+        title: Text(_isEdit
+            ? 'Eintrag ändern'
+            : (_isReconcile ? 'Vorrat abgleichen' : 'Energieträger erfassen')),
         leading: IconButton(
           tooltip: 'Zurück',
           icon: const Icon(Icons.arrow_back),
@@ -265,6 +313,13 @@ class _EnergyFormPageState extends State<EnergyFormPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           children: [
+            if (_isEdit) ...[
+              const KwfHint(
+                  'Du änderst deinen letzten Eintrag für diesen Vorrat. Beim Speichern '
+                  'rechnen wir den Verbrauch neu, wie bei einem neuen Eintrag.',
+                  icon: Icons.edit_outlined),
+              const SizedBox(height: 12),
+            ],
             if (reconcile != null) ...[
               KwfHint(
                   'Trag ein, wie viel jetzt noch da ist. Neu dazu bleibt 0, wenn du nichts '

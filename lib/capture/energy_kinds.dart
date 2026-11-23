@@ -84,3 +84,60 @@ String meteringText(String code) => switch (code) {
       'M2' => 'M2 Heizwärme',
       _ => code,
     };
+
+/// Farbe und Symbol pro Messpunkt, damit gleiche Traeger fuer verschiedene
+/// Zwecke (z.B. Gas fuer Warmwasser und fuer Heizen) auf einen Blick
+/// unterscheidbar sind. Text bleibt anthrazit, die Farbe traegt nie allein.
+/// TODO(prüfen): Flaechenfarbe fuer M2 ist nicht in tokens.json (helles Orange
+/// aus klima-innen), mit dem Design System klaeren.
+({Color background, Color accent, IconData icon}) meteringStyle(String code) => switch (code) {
+      'M1' => (
+          background: KwfColors.hellblau,
+          accent: KwfColors.blau,
+          icon: Icons.water_drop_outlined
+        ),
+      'M2' => (
+          background: const Color(0xFFF8E3D0),
+          accent: KwfColors.klimaInnen,
+          icon: Icons.local_fire_department_outlined
+        ),
+      _ => (
+          background: KwfColors.grauHell,
+          accent: KwfColors.textSekundaer,
+          icon: Icons.call_split
+        ),
+    };
+
+/// Tag mit Kuerzel und Zweck des Messpunkts ("M1 Warmwasser").
+class MeteringTag extends StatelessWidget {
+  const MeteringTag(this.code, {super.key});
+  final String code;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = meteringStyle(code);
+    return Container(
+      key: ValueKey('mp-tag-$code'),
+      padding: const EdgeInsets.fromLTRB(5, 2, 7, 2),
+      decoration: BoxDecoration(
+        color: s.background,
+        borderRadius: BorderRadius.circular(KwfRadius.sm),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(s.icon, size: 13, color: s.accent),
+          const SizedBox(width: 4),
+          Text(meteringText(code),
+              style: const TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                fontVariations: [FontVariation.weight(600)],
+                color: KwfColors.anthrazit,
+              )),
+        ],
+      ),
+    );
+  }
+}
