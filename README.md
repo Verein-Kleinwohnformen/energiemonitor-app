@@ -52,8 +52,8 @@ Technik: Flutter (Dart `^3.5.3`), Firebase Auth, Firestore, Firebase Hosting. Di
 
 - Die Firebase-Web-Konfiguration in `lib/firebase_options.dart` ist **kein Geheimnis**, sondern wird mit jeder Web-App ausgeliefert. Der Schutz liegt in den [Firestore-Rules](firestore.rules) und in den Einschränkungen des API-Schlüssels in der Google Cloud Console: nur Firebase-Dienste und nur die eigenen Webadressen (HTTP-Referrer). Setze beides für dein eigenes Projekt.
 - Ein `*` ist in den erlaubten Webadressen nur ganz vorne vor einem Punkt möglich (`*.example.org`). Für einen Firebase-Hosting-Vorschaukanal (`<projekt>--<kanal>-<hash>.web.app`) die genaue Adresse eintragen, sonst scheitert dort die Anmeldung.
-- Die Rules erlauben Usern **nicht**, ihre eigenen Zugriffe (`monitor_read`, `monitor_edit`, `monitor_api_keys`) zu ändern. Zugriffe vergibt ein Superadmin in der App (Custom Claim `superadmin`, gesetzt mit `tool/admin/set_superadmin.mjs`), jede Änderung wird protokolliert. Neue Monitore legst du in der Firebase Console an. Teste Änderungen an den Rules im [Firestore-Emulator](https://firebase.google.com/docs/emulator-suite).
-- Device-Keys der API gehören nie ins Repo.
+- Die Rules erlauben Usern **nicht**, ihre eigenen Zugriffe (`monitor_read`, `monitor_edit`) zu ändern. Zugriffe vergibt ein Superadmin in der App (Custom Claim `superadmin`, gesetzt mit `tool/admin/set_superadmin.mjs`), jede Änderung wird protokolliert. Neue Monitore legst du in der Firebase Console an. Teste Änderungen an den Rules im [Firestore-Emulator](https://firebase.google.com/docs/emulator-suite).
+- Der Daten-Download meldet sich bei der API mit dem Login-Token der Person an (`Authorization: Bearer`); die API erlaubt nur Monitore aus `monitor_read`. Device-Keys braucht die App nicht und sie gehören nie ins Repo. Das alte Feld `monitor_api_keys` wird nicht mehr gelesen oder geschrieben.
 
 ### Cloud Functions
 

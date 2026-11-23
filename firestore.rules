@@ -142,7 +142,8 @@ service cloud.firestore {
         && request.resource.data.user_id == userId
         && request.resource.data.monitor_read == ['sandbox_monitor']
         && request.resource.data.monitor_edit == ['sandbox_monitor']
-        && request.resource.data.monitor_api_keys == {}
+        && (!('monitor_api_keys' in request.resource.data)
+             || request.resource.data.monitor_api_keys == {})
         && emailFromToken(request.resource.data);
 
       // Die Person selbst aendert nur diese Felder (Liste der erlaubten
