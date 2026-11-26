@@ -124,8 +124,9 @@ abstract final class InfoTexts {
     title: 'Pellets und Holz, geschätzt',
     what: 'Wann ihr wie viel verbrannt habt.',
     source: 'Deine Einträge (Kauf und Rest) und die Innentemperatur der Netatmo.',
-    method: 'Zwischen zwei Einträgen kennen wir die verbrannte Menge. Wir verteilen sie '
-        'auf die Feuer, die wir am Temperaturverlauf erkennen: Die Temperatur steigt um '
+    method: 'Aus Kauf und Rest kennen wir die verbrannte Menge. Weil der Rest geschätzt ist, '
+        'zählen wir alle Einträge einer Saison zusammen und verteilen diese Menge auf die Feuer '
+        'der ganzen Saison, die wir am Temperaturverlauf erkennen: Die Temperatur steigt um '
         'mehr als 3 °C pro Stunde, ohne dass die Bodenheizung läuft. Längere Feuer '
         'bekommen mehr. Seit deinem letzten Eintrag rechnen wir mit {kg_pro_feuer} kg '
         'pro Feuer.',
@@ -136,8 +137,8 @@ abstract final class InfoTexts {
     title: 'Gas, geschätzt',
     what: 'Wie viel Propan ihr gebraucht habt.',
     source: 'Deine Einträge (Kauf und Rest), bewohnte Tage aus dem CO2.',
-    method: 'Die Menge zwischen zwei Einträgen verteilen wir gleichmässig auf die bewohnten '
-        'Tage. Ohne Wägen der alten Flasche ist der Rest oft eine Schätzung, das macht '
+    method: 'Die Menge aller Einträge einer Saison verteilen wir gleichmässig auf die bewohnten '
+        'Tage der Saison. Ohne Wägen der alten Flasche ist der Rest oft eine Schätzung, das macht '
         'auch diese Zahl unsicher.',
     certainty: 'Geschätzt.',
   );

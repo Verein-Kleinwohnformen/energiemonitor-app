@@ -52,13 +52,13 @@ Die Texte stehen nicht im Code verstreut, sondern in einer Datei `lib/info_texts
 **Pellets / Holz, geschätzt**
 - Was: Wann ihr wie viel verbrannt habt.
 - Woher: Deine Einträge (Kauf und Rest) und die Innentemperatur der Netatmo.
-- Rechnung: Zwischen zwei Einträgen kennen wir die verbrannte Menge. Wir verteilen sie auf die Feuer, die wir am Temperaturverlauf erkennen: Die Temperatur steigt um mehr als 3 °C pro Stunde, ohne dass die Bodenheizung läuft. Längere Feuer bekommen mehr. Seit deinem letzten Eintrag rechnen wir mit {kg_pro_feuer} kg pro Feuer.
+- Rechnung: Aus Kauf und Rest kennen wir die verbrannte Menge. Weil der Rest geschätzt ist, zählen wir alle Einträge einer Saison zusammen und verteilen diese Menge auf die Feuer der ganzen Saison, die wir am Temperaturverlauf erkennen: Die Temperatur steigt um mehr als 3 °C pro Stunde, ohne dass die Bodenheizung läuft. Längere Feuer bekommen mehr. Seit deinem letzten Eintrag rechnen wir mit {kg_pro_feuer} kg pro Feuer.
 - Sicherheit: geschätzt. {anzahl_feuer} Feuer erkannt.
 
 **Gas, geschätzt**
 - Was: Wie viel Propan ihr gebraucht habt.
 - Woher: Deine Einträge (Kauf und Rest), bewohnte Tage aus dem CO2.
-- Rechnung: Die Menge zwischen zwei Einträgen verteilen wir gleichmässig auf die bewohnten Tage. Ohne Wägen der alten Flasche ist der Rest oft eine Schätzung, das macht auch diese Zahl unsicher.
+- Rechnung: Die Menge aller Einträge einer Saison verteilen wir gleichmässig auf die bewohnten Tage der Saison. Ohne Wägen der alten Flasche ist der Rest oft eine Schätzung, das macht auch diese Zahl unsicher.
 - Sicherheit: geschätzt.
 
 **Watt pro Person**
@@ -135,7 +135,9 @@ Die Schwellen sind aus sechs Monaten Beispielhaus abgeleitet und **für den Wint
 
 **Verteilung bei abgeschlossenem Zeitraum** (zwei Einträge vorhanden): Der Verbrauch zwischen den Einträgen wird auf die erkannten Feuer verteilt, gewichtet mit der Dauer, in der die Innentemperatur über dem Wert vor dem Feuer lag (Brenndauer als Näherung). Ein Ergebnis wie "Abend 14.5.: 1.6 kg" ist also berechnet, nicht gemessen.
 
-**Laufender Zeitraum** (nach dem letzten Eintrag, Verbrauch noch unbekannt): Die App zählt die erkannten Feuer und schätzt die Menge mit dem Durchschnitt pro Feuer aus dem letzten abgeschlossenen Zeitraum. Diese Werte werden gestrichelt gezeigt und mit dem nächsten Eintrag ersetzt. Gibt es noch keinen abgeschlossenen Zeitraum, zeigt die App nur die Zahl der Feuer ("Pelletofen an 4 Abenden erkannt") und keine kWh.
+**Ganze Saison statt Einzelzeitraum (ab 26.11.2026):** Der Rest im Lager ist geschätzt, verlässlich ist nur, was gekauft wurde. Darum legt die API alle abgeschlossenen Zeiträume einer Saison zusammen (Saison des späteren Eintrags: Oktober bis März oder April bis September, wie in der Auswertung). Die Summe ist Kauf plus erster Rest minus letzter Rest, die Fehler der Zwischenstände heben sich auf. Diese Summe wird über alle Tage vom ersten bis zum letzten Eintrag der Saison verteilt. Jeder neue, geänderte oder gelöschte Eintrag verteilt die ganze Saison beim nächsten stündlichen Lauf neu. Eine Methode gilt nur, wenn ihre Daten mindestens 80 % der Saison abdecken (sonst der nächste Fallback). Ergibt eine Saison weniger als 0, zählt 0 (prüfen).
+
+**Laufender Zeitraum** (nach dem letzten Eintrag, Verbrauch noch unbekannt): Die App zählt die erkannten Feuer und schätzt die Menge mit dem Durchschnitt pro Feuer aus der letzten abgeschlossenen Saison. Diese Werte werden gestrichelt gezeigt und mit dem nächsten Eintrag ersetzt. Gibt es noch keinen abgeschlossenen Zeitraum, zeigt die App nur die Zahl der Feuer ("Pelletofen an 4 Abenden erkannt") und keine kWh.
 
 **Fallbacks**, in dieser Reihenfolge, jeweils im Info-Overlay genannt:
 

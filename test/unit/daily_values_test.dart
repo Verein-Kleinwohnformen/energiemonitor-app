@@ -89,4 +89,52 @@ void main() {
     expect(DailyValues.fromFirestore('kein-datum', {}), isNull);
     expect(DailyValues.keyOf(DateTime(2026, 1, 2)), '2026-01-02');
   });
+
+  group('DailyDayCache', () {
+    DailyValues day(DateTime d) => DailyValues.fromFirestore(DailyValues.keyOf(d), const {})!;
+
+    test('liest nur fehlende Tage, auch Tage ohne Dokument zaehlen als gelesen', () async {
+      final calls = <(DateTime, DateTime)>[];
+      var clock = DateTime(2026, 11, 26, 12);
+      final cache = DailyDayCache((id, from, to) async {
+        calls.add((from, to));
+        return [
+          for (var d = from; !d.isAfter(to); d = DateTime(d.year, d.month, d.day + 1))
+            if (d.day != 22) day(d), // am 22. gibt es kein Dokument
+        ];
+      }, now: () => clock);
+
+      final week = await cache.load('m', DateTime(2026, 11, 20), DateTime(2026, 11, 26));
+      expect(week, hasLength(6));
+      expect(calls, [(DateTime(2026, 11, 20), DateTime(2026, 11, 26))]);
+
+      // Monat: nur 1. bis 19. fehlt
+      final month = await cache.load('m', DateTime(2026, 11, 1), DateTime(2026, 11, 26));
+      expect(month, hasLength(25));
+      expect(calls.last, (DateTime(2026, 11, 1), DateTime(2026, 11, 19)));
+
+      // Woche nochmals: nichts lesen
+      await cache.load('m', DateTime(2026, 11, 20), DateTime(2026, 11, 26));
+      expect(calls, hasLength(2));
+
+      // Nach 10 Minuten wieder lesen
+      clock = clock.add(const Duration(minutes: 11));
+      await cache.load('m', DateTime(2026, 11, 24), DateTime(2026, 11, 26));
+      expect(calls.last, (DateTime(2026, 11, 24), DateTime(2026, 11, 26)));
+    });
+
+    test('gleichzeitige Abfragen lesen nicht doppelt', () async {
+      var n = 0;
+      final cache = DailyDayCache((id, from, to) async {
+        n++;
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+        return [day(from)];
+      });
+      await Future.wait([
+        cache.load('m', DateTime(2026, 11, 26), DateTime(2026, 11, 26)),
+        cache.load('m', DateTime(2026, 11, 26), DateTime(2026, 11, 26)),
+      ]);
+      expect(n, 1);
+    });
+  });
 }

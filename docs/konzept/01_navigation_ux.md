@@ -97,7 +97,7 @@ Von oben nach unten:
    - "Heute Nacht CO2 bis 2'100 ppm. Lüften lohnt sich." (nur wenn K4 vorhanden)
 5. Link "Zur Auswertung".
 
-**Umsetzung (Etappe 3, 23.11.2026):** Der Satz rechnet mit der Endenergie (Netz, selbst genutzter Solarstrom, Brennstoffe mit Heizwert) von Montag bis zum letzten Messwert. Die Kacheln zeigen den Verlauf der letzten sieben Tage. Ohne Klimasensor fällt die Klima-Kachel weg. Brennstoffe, die ohne Klimasensor nur gleichmässig verteilt sind, stehen als Wochensumme unter den Balken. Hinweise: Vorrat seit über 60 Tagen ohne Eintrag (Schwelle prüfen), Aussensensor über 40 °C, CO2 letzte Nacht über 2'000 ppm. Ohne Tageswerte steht eine ruhige Karte.
+**Umsetzung (Etappe 3, 23.11.2026):** Der Satz rechnet mit der Endenergie (Netz, selbst genutzter Solarstrom, Brennstoffe mit Heizwert) von Montag bis zum letzten Messwert. **Änderung 26.11.2026:** Satz, Kacheln und Tagesbalken zeigen die letzten sieben Tage bis heute statt Montag bis Sonntag, sonst steht am Montag nur ein Balken. Die Kacheln zeigen den Verlauf der letzten sieben Tage. Ohne Klimasensor fällt die Klima-Kachel weg. Brennstoffe, die ohne Klimasensor nur gleichmässig verteilt sind, stehen als Wochensumme unter den Balken. Hinweise: Vorrat seit über 60 Tagen ohne Eintrag (Schwelle prüfen), Aussensensor über 40 °C, CO2 letzte Nacht über 2'000 ppm. Ohne Tageswerte steht eine ruhige Karte.
 
 ### 5.2 Auswertung
 

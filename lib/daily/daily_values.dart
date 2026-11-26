@@ -218,32 +218,23 @@ abstract class DailyRepository {
   Future<List<DailyValues>> load(String monitorId, DateTime from, DateTime to);
 }
 
-/// Liest aus Firestore und behaelt das Ergebnis 10 Minuten. Die API rechnet
-/// stuendlich, oefter lesen bringt nichts.
+/// Liest aus Firestore und behaelt jeden Tag 10 Minuten. Die API rechnet
+/// stuendlich, oefter lesen bringt nichts. Der Zwischenspeicher gilt pro Tag,
+/// nicht pro Zeitraum: Wer in der Auswertung zwischen Woche, Monat und Jahr
+/// wechselt, liest nur die Tage, die noch fehlen (jeder Tag ist ein Lesevorgang).
 class FirestoreDaily implements DailyRepository {
-  FirestoreDaily([FirebaseFirestore? db]) : _db = db ?? FirebaseFirestore.instance;
-  final FirebaseFirestore _db;
-  final _cache = <String, (DateTime, Future<List<DailyValues>>)>{};
-  static const _keep = Duration(minutes: 10);
+  FirestoreDaily([FirebaseFirestore? db])
+      : _cache = DailyDayCache((id, from, to) => _read(db ?? FirebaseFirestore.instance, id, from, to));
+
+  final DailyDayCache _cache;
 
   @override
-  Future<List<DailyValues>> load(String monitorId, DateTime from, DateTime to) {
-    final key = '$monitorId/${keyOf(from)}/${keyOf(to)}';
-    final hit = _cache[key];
-    if (hit != null && DateTime.now().difference(hit.$1) < _keep) return hit.$2;
-    final f = _read(monitorId, from, to);
-    _cache[key] = (DateTime.now(), f);
-    f.catchError((Object _) {
-      _cache.remove(key);
-      return const <DailyValues>[];
-    });
-    return f;
-  }
+  Future<List<DailyValues>> load(String monitorId, DateTime from, DateTime to) =>
+      _cache.load(monitorId, from, to);
 
-  static String keyOf(DateTime d) => DailyValues.keyOf(d);
-
-  Future<List<DailyValues>> _read(String monitorId, DateTime from, DateTime to) async {
-    final snap = await _db
+  static Future<List<DailyValues>> _read(
+      FirebaseFirestore db, String monitorId, DateTime from, DateTime to) async {
+    final snap = await db
         .collection('devices')
         .doc(monitorId)
         .collection('daily')
@@ -255,4 +246,60 @@ class FirestoreDaily implements DailyRepository {
       for (final doc in snap.docs) ?DailyValues.fromFirestore(doc.id, doc.data()),
     ];
   }
+}
+
+typedef DailyFetch = Future<List<DailyValues>> Function(String monitorId, DateTime from, DateTime to);
+
+/// Zwischenspeicher pro Tag. Fehlende oder abgelaufene Tage werden in einer
+/// Abfrage vom ersten bis zum letzten fehlenden Tag gelesen. Auch Tage ohne
+/// Dokument gelten als gelesen.
+class DailyDayCache {
+  DailyDayCache(this._fetch, {this.keep = const Duration(minutes: 10), DateTime Function()? now})
+      : _now = now ?? DateTime.now;
+
+  final DailyFetch _fetch;
+  final Duration keep;
+  final DateTime Function() _now;
+  final _days = <String, Map<String, (DateTime, DailyValues?)>>{};
+  final _busy = <String, Future<void>>{};
+
+  Future<List<DailyValues>> load(String monitorId, DateTime from, DateTime to) async {
+    // Nacheinander pro Monitor, damit zwei Seiten denselben Tag nicht doppelt lesen.
+    while (_busy[monitorId] != null) {
+      await _busy[monitorId];
+    }
+    final days = _days.putIfAbsent(monitorId, () => {});
+    final wanted = [
+      for (var d = DateTime(from.year, from.month, from.day);
+          !d.isAfter(to);
+          d = DateTime(d.year, d.month, d.day + 1))
+        d,
+    ];
+    final now = _now();
+    final missing = [
+      for (final d in wanted)
+        if (!_fresh(days[DailyValues.keyOf(d)], now)) d,
+    ];
+    if (missing.isNotEmpty) {
+      final job = _fetch(monitorId, missing.first, missing.last).then((list) {
+        final byKey = {for (final v in list) DailyValues.keyOf(v.date): v};
+        for (var d = missing.first; !d.isAfter(missing.last); d = DateTime(d.year, d.month, d.day + 1)) {
+          final k = DailyValues.keyOf(d);
+          days[k] = (now, byKey[k]);
+        }
+      });
+      _busy[monitorId] = job;
+      try {
+        await job;
+      } finally {
+        _busy.remove(monitorId);
+      }
+    }
+    return [
+      for (final d in wanted) ?days[DailyValues.keyOf(d)]?.$2,
+    ];
+  }
+
+  bool _fresh((DateTime, DailyValues?)? hit, DateTime now) =>
+      hit != null && now.difference(hit.$1) < keep;
 }
