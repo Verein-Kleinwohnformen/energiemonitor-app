@@ -71,7 +71,7 @@ Ein Dokument pro Tag in Lokalzeit Europe/Zurich:
 }
 ```
 
-Klimawerte werden nach `sensor_id` getrennt aggregiert (Studienquelle `netatmo`), weil alle Klimasensoren heute unter K0 und mit gleichen Feldnamen ankommen. `method` und `provisional` sagen der App und dem Info-Overlay, wie ein Brennstoffwert entstanden ist. Ein neuer Formulareintrag löst eine Neuberechnung der `manual_alloc` aller Tage seit dem vorherigen Eintrag aus.
+Klimawerte werden nach `sensor_id` getrennt aggregiert (Studienquelle `netatmo`), weil alle Klimasensoren heute unter K0 und mit gleichen Feldnamen ankommen. `method` und `provisional` sagen der App und dem Info-Overlay, wie ein Brennstoffwert entstanden ist. Ein neuer, geänderter oder gelöschter Formulareintrag löst eine Neuberechnung der `manual_alloc` aller Tage seiner Saison aus (05_infotexte.md, Abschnitt 2).
 
 Damit liest die Jahresauswertung 365 kleine Dokumente statt rund 12 Mio. Datenpunkte. Die Belegung und alle Schwellen sind dieselben wie in der Auswertung Langzeittest, damit App und Studie gleich rechnen.
 

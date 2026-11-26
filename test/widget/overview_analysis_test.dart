@@ -39,10 +39,10 @@ Future<void> openAnalysis(WidgetTester tester) async {
 void main() {
   setUpAll(loadAppFonts);
 
-  testWidgets('Uebersicht: Satz der Woche, Kacheln, Tagesbalken, Link', (tester) async {
+  testWidgets('Uebersicht: Satz der letzten 7 Tage, Kacheln, Tagesbalken, Link', (tester) async {
     await pumpApp(tester);
-    expect(find.text('DIESE WOCHE'), findsOneWidget);
-    expect(find.textContaining('Diese Woche habt ihr'), findsOneWidget);
+    expect(find.text('LETZTE 7 TAGE'), findsOneWidget);
+    expect(find.textContaining('In den letzten sieben Tagen habt ihr'), findsOneWidget);
     expect(find.textContaining('davon von der Sonne'), findsOneWidget);
     expect(find.text('Verbrauch pro Person und Tag'), findsOneWidget);
     expect(find.text('Eigenversorgung Strom'), findsOneWidget);

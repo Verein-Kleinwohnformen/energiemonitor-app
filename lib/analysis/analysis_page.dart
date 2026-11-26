@@ -340,14 +340,18 @@ class _PerPerson extends StatelessWidget {
           const ChartEmpty('Faktoren nach Minergie fehlen noch.')
         else
           PerPersonBenchmark(rows: rowsMinergie, scaleMax: max),
-        SwitchListTile(
-          key: const ValueKey('with-pv'),
-          contentPadding: EdgeInsets.zero,
-          dense: true,
-          title: Text('mit Solarstrom', style: kwfText(13, weight: FontWeight.w500)),
-          subtitle: const Text('zeigt den Wert ohne Gutschrift für den eigenen Solarstrom'),
-          value: withPv,
-          onChanged: onWithPv,
+        // Eigenes Material, sonst verdeckt die Karte die Wellen (Assertion ab Flutter 3.50).
+        Material(
+          type: MaterialType.transparency,
+          child: SwitchListTile(
+            key: const ValueKey('with-pv'),
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: Text('mit Solarstrom', style: kwfText(13, weight: FontWeight.w500)),
+            subtitle: const Text('zeigt den Wert ohne Gutschrift für den eigenen Solarstrom'),
+            value: withPv,
+            onChanged: onWithPv,
+          ),
         ),
         const Divider(height: 20),
         Text('Nach 2000 Watt', style: KwfText.kicker),

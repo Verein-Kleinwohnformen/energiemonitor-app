@@ -16,7 +16,8 @@ enum RangeKind {
 DateTime dayOf(DateTime t) => DateTime(t.year, t.month, t.day);
 
 class Period {
-  Period._(this.kind, this.start, this.end, DateTime today) : today = dayOf(today);
+  Period._(this.kind, this.start, this.end, DateTime today, {this.rolling = false})
+      : today = dayOf(today);
 
   final RangeKind kind;
 
@@ -49,6 +50,17 @@ class Period {
             kind, DateTime(a.year, a.month - 11), DateTime(a.year, a.month + 1, 0), today);
     }
   }
+
+  /// Die letzten [n] Tage bis und mit heute (Uebersicht). Gilt fuer die
+  /// Summen wie eine Woche, wird aber nicht geblaettert.
+  factory Period.lastDays(DateTime today, {int n = 7}) {
+    final t = dayOf(today);
+    return Period._(RangeKind.week, DateTime(t.year, t.month, t.day - (n - 1)), t, today,
+        rolling: true);
+  }
+
+  /// Rollender Zeitraum aus [Period.lastDays].
+  final bool rolling;
 
   /// Letzter Tag mit moeglichen Daten: Ende, hoechstens heute.
   DateTime get until => end.isAfter(today) ? today : end;
@@ -85,6 +97,7 @@ class Period {
     final dmy = DateFormat('d.M.yyyy');
     switch (kind) {
       case RangeKind.week:
+        if (rolling) return '${dm.format(start)} bis ${dmy.format(end)}';
         final kw = _isoWeek(start);
         return 'KW $kw · ${dm.format(start)} bis ${dmy.format(end)}';
       case RangeKind.month:
@@ -104,10 +117,14 @@ class Period {
 
   @override
   bool operator ==(Object other) =>
-      other is Period && other.kind == kind && other.start == start && other.today == today;
+      other is Period &&
+      other.kind == kind &&
+      other.start == start &&
+      other.today == today &&
+      other.rolling == rolling;
 
   @override
-  int get hashCode => Object.hash(kind, start, today);
+  int get hashCode => Object.hash(kind, start, today, rolling);
 }
 
 int _daysBetween(DateTime a, DateTime b) =>

@@ -67,4 +67,14 @@ void main() {
     expect(Period.of(RangeKind.week, DateTime(2026, 1, 1), today: today).label,
         startsWith('KW 1 '));
   });
+
+  test('Letzte 7 Tage: heute rechts, auch am Montag sieben Tage', () {
+    final monday = DateTime(2026, 11, 23, 8);
+    final p = Period.lastDays(monday);
+    expect((p.start, p.end, p.until), (DateTime(2026, 11, 17), DateTime(2026, 11, 23), DateTime(2026, 11, 23)));
+    expect(p.days, hasLength(7));
+    expect(p.isCurrent, isTrue);
+    expect(p.label, '17.11. bis 23.11.2026');
+    expect(Period.lastDays(DateTime(2026, 10, 27)).days.first, DateTime(2026, 10, 21));
+  });
 }

@@ -1,4 +1,4 @@
-// Uebersicht: Wie lief die Woche? (Konzept 01_navigation_ux.md, 5.1)
+// Uebersicht: Wie liefen die letzten sieben Tage? (Konzept 01_navigation_ux.md, 5.1)
 // Liest nur Tageswerte aus `daily`, rechnet sie mit PeriodSummary zusammen.
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -57,11 +57,10 @@ class _OverviewPageState extends State<OverviewPage> {
     if (id == null) return;
     final services = AppServices.of(context);
     final now = services.clock.now();
-    final week = Period.of(RangeKind.week, now, today: now);
-    // Eine Woche davor fuer die Verlaeufe der Kacheln.
-    final from = DateTime(week.start.year, week.start.month, week.start.day - 7);
+    // Die letzten sieben Tage, gleich fuer Satz, Kacheln und Balken.
+    final week = Period.lastDays(now);
     _load = (
-      services.daily.load(id, from, dayOf(now)),
+      services.daily.load(id, week.start, dayOf(now)),
       services.factors.load(),
       services.entries.load(id, currentYear: now.year),
     ).wait;
@@ -105,7 +104,7 @@ class OverviewView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final week = Period.of(RangeKind.week, now, today: now);
+    final week = Period.lastDays(now);
     final s = PeriodSummary.of(
         period: week, days: data.days, household: data.household, factors: data.factors);
     final values = infoValues(s, data.factors);
@@ -119,7 +118,7 @@ class OverviewView extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           child: Text(
               'Die ersten Tageswerte kommen nach der ersten vollen Stunde mit Daten. '
-              'Danach siehst du hier, wie viel Energie ihr diese Woche gebraucht habt und woher '
+              'Danach siehst du hier, wie viel Energie ihr in den letzten sieben Tagen gebraucht habt und woher '
               'sie kam.',
               style: KwfText.body),
         ),
@@ -162,14 +161,14 @@ class _WeekSentence extends StatelessWidget {
     final until = s.dataUntil;
     final String sentence;
     if (s.totalKwh < 0.5) {
-      sentence = 'Noch kaum Daten diese Woche. Die Tageswerte kommen jede Stunde.';
+      sentence = 'Noch kaum Daten in den letzten sieben Tagen. Die Tageswerte kommen jede Stunde.';
     } else {
       final solar = s.totalKwh > 0 ? s.pvSelfKwh / s.totalKwh : 0.0;
-      sentence = 'Diese Woche habt ihr ${fmtKwh(s.totalKwh)} kWh gebraucht'
+      sentence = 'In den letzten sieben Tagen habt ihr ${fmtKwh(s.totalKwh)} kWh gebraucht'
           '${s.hasPv ? ', ${fmtPct(solar)} davon von der Sonne' : ''}.';
     }
     final meta = [
-      'Montag bis ${until == null ? 'heute' : (dayOf(until) == dayOf(now) ? 'heute ${DateFormat('HH:mm').format(until)}' : DateFormat('EEEE HH:mm', 'de').format(until))}',
+      '${DateFormat('EEEE', 'de').format(s.period.start)} bis ${until == null ? 'heute' : (dayOf(until) == dayOf(now) ? 'heute ${DateFormat('HH:mm').format(until)}' : DateFormat('EEEE HH:mm', 'de').format(until))}',
       if (s.personsNow != null) s.personsNow == 1 ? '1 Person' : '${s.personsNow} Personen',
       if (s.fuelEstimated) 'Brennstoffe geschätzt',
       if (s.gappyDays > 0) 'Daten lückenhaft (${s.gappyDays} ${s.gappyDays == 1 ? 'Tag' : 'Tage'})',
@@ -177,7 +176,7 @@ class _WeekSentence extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const KwfKicker('Diese Woche'),
+        const KwfKicker('Letzte 7 Tage'),
         const SizedBox(height: 6),
         Semantics(header: true, child: Text(sentence, style: kwfText(22, height: 1.25))),
         const SizedBox(height: 6),
@@ -227,7 +226,7 @@ class _Tiles extends StatelessWidget {
         spark: series((x) => x.kwhPerPersonDay),
         context: s.householdMissing && s.personsNow == null
             ? 'Personen fehlen: unter Mehr > Haushalt eintragen.'
-            : 'Montag bis heute',
+            : 'Letzte 7 Tage',
         info: InfoTexts.consumptionPerPerson.fill(values),
         stand: stand,
       ),
@@ -266,7 +265,7 @@ class _Tiles extends StatelessWidget {
   }
 }
 
-/// Tagesbalken der Woche, Montag bis Sonntag. Brennstoffe, die nicht auf
+/// Tagesbalken der letzten sieben Tage, heute rechts. Brennstoffe, die nicht auf
 /// Tage verteilt werden koennen, stehen als Summe darunter.
 class WeekBars extends StatelessWidget {
   const WeekBars({super.key, required this.summary});
@@ -313,7 +312,7 @@ class WeekBars extends StatelessWidget {
             padding: const EdgeInsets.only(top: 8),
             child: Text(
               '${kFuelLabels[f.type] ?? f.type}: ${f.kwh == null ? '' : '${fmtKwh(f.kwh!)} kWh '}'
-              'in dieser Woche, geschätzt. Verteilung auf Tage nicht möglich (kein Klimasensor).',
+              'in den letzten sieben Tagen, geschätzt. Verteilung auf Tage nicht möglich (kein Klimasensor).',
               style: KwfText.small,
             ),
           ),
